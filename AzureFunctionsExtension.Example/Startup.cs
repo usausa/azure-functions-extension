@@ -6,7 +6,7 @@ public sealed class Startup : FunctionsStartup
 {
     public override void Configure(IFunctionsHostBuilder builder)
     {
-        builder.Services.AddSystemTextJsonResult(c =>
+        builder.Services.AddAzureFunctionExtension(c =>
         {
             c.Options.Converters.Add(new DateTimeConverter());
         });

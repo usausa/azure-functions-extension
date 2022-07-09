@@ -1,7 +1,7 @@
 namespace AzureFunctionsExtension.Bindings;
 
+using AzureFunctionsExtension;
 using AzureFunctionsExtension.Annotations;
-using AzureFunctionsExtension.Mvc;
 
 using Microsoft.AspNetCore.Http;
 using Microsoft.Azure.WebJobs.Host.Config;

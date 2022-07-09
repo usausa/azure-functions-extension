@@ -8,12 +8,12 @@ using Microsoft.Extensions.DependencyInjection;
 
 public static class ServiceCollectionExtensions
 {
-    public static IServiceCollection AddSystemTextJsonResult(this IServiceCollection services)
+    public static IServiceCollection AddAzureFunctionExtension(this IServiceCollection services)
     {
-        return AddSystemTextJsonResult(services, _ => { });
+        return AddAzureFunctionExtension(services, _ => { });
     }
 
-    public static IServiceCollection AddSystemTextJsonResult(this IServiceCollection services, Action<JsonOptions> action)
+    public static IServiceCollection AddAzureFunctionExtension(this IServiceCollection services, Action<JsonOptions> action)
     {
         services.Configure(action);
         services.AddSingleton<SystemTextJsonResultExecutor, SystemTextJsonResultExecutor>();

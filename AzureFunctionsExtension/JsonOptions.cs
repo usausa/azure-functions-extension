@@ -1,4 +1,4 @@
-namespace AzureFunctionsExtension.Mvc;
+namespace AzureFunctionsExtension;
 
 using System.Text.Json;
 
