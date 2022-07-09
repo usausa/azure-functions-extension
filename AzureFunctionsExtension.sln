@@ -3,9 +3,22 @@ Microsoft Visual Studio Solution File, Format Version 12.00
 # Visual Studio Version 17
 VisualStudioVersion = 17.2.32602.215
 MinimumVisualStudioVersion = 10.0.40219.1
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "AzureFunctionsExtension", "AzureFunctionsExtension\AzureFunctionsExtension.csproj", "{DB3E7AED-3065-439C-AF3F-3370106CB42A}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "AzureFunctionsExtension", "AzureFunctionsExtension\AzureFunctionsExtension.csproj", "{DB3E7AED-3065-439C-AF3F-3370106CB42A}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "AzureFunctionsExtension.Example", "AzureFunctionsExtension.Example\AzureFunctionsExtension.Example.csproj", "{68F886B5-0F41-402B-BA6E-C39DB4D61FEC}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "AzureFunctionsExtension.Example", "AzureFunctionsExtension.Example\AzureFunctionsExtension.Example.csproj", "{68F886B5-0F41-402B-BA6E-C39DB4D61FEC}"
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "ソリューション項目", "ソリューション項目", "{D4471950-D4C6-4482-9FD2-130F63F60421}"
+	ProjectSection(SolutionItems) = preProject
+		.editorconfig = .editorconfig
+		.gitattributes = .gitattributes
+		.gitignore = .gitignore
+		Analyzers.ruleset = Analyzers.ruleset
+		AzureFunctionsExtension.sln.DotSettings = AzureFunctionsExtension.sln.DotSettings
+		Directory.Build.props = Directory.Build.props
+		Directory.Build.targets = Directory.Build.targets
+		LICENSE = LICENSE
+		README.md = README.md
+	EndProjectSection
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution

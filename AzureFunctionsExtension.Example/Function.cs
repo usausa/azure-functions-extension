@@ -1,35 +1,35 @@
-using System;
-using System.IO;
-using System.Threading.Tasks;
-using Microsoft.AspNetCore.Mvc;
+namespace AzureFunctionsExtension.Example;
+
+using AzureFunctionsExtension.Annotations;
+
 using Microsoft.Azure.WebJobs;
 using Microsoft.Azure.WebJobs.Extensions.Http;
 using Microsoft.AspNetCore.Http;
+using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Logging;
-using Newtonsoft.Json;
 
-namespace AzureFunctionsExtension.Example
+public class Function
 {
-    public static class Function
+    private readonly ILogger<Function> log;
+
+    public Function(ILogger<Function> log)
     {
-        [FunctionName("Function")]
-        public static async Task<IActionResult> Run(
-            [HttpTrigger(AuthorizationLevel.Anonymous, "get", "post", Route = null)] HttpRequest req,
-            ILogger log)
+        this.log = log;
+    }
+
+    [FunctionName("Function")]
+    [System.Diagnostics.CodeAnalysis.SuppressMessage("Style", "IDE0060", Justification = "Ignore")]
+    public IActionResult Query(
+        [HttpTrigger(AuthorizationLevel.Anonymous, "get", Route = "query")] HttpRequest req,
+        [BindQuery] int a,
+        [BindQuery] int? b,
+        [BindQuery] int c = 3)
+    {
+        log.LogInformation("Query request. a=[{A}], b=[{B}], c=[{C}]", a, b, c);
+
+        return Results.Of(new QueryResponse
         {
-            log.LogInformation("C# HTTP trigger function processed a request.");
-
-            string name = req.Query["name"];
-
-            string requestBody = await new StreamReader(req.Body).ReadToEndAsync();
-            dynamic data = JsonConvert.DeserializeObject(requestBody);
-            name = name ?? data?.name;
-
-            string responseMessage = string.IsNullOrEmpty(name)
-                ? "This HTTP triggered function executed successfully. Pass a name in the query string or in the request body for a personalized response."
-                : $"Hello, {name}. This HTTP triggered function executed successfully.";
-
-            return new OkObjectResult(responseMessage);
-        }
+            Result = a + (b ?? 0) + c
+        });
     }
 }

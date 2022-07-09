@@ -11,7 +11,7 @@
   </PropertyGroup>
 
   <PropertyGroup>
-    <Version>1.3.2</Version>
+    <Version>0.1.0</Version>
       <PublishRepositoryUrl>true</PublishRepositoryUrl>
       <EmbedUntrackedSources>true</EmbedUntrackedSources>
       <IncludeSymbols>true</IncludeSymbols>
@@ -20,7 +20,7 @@
       <Authors>machi_pon</Authors>
       <Copyright>Copyright (c) 2022 machi_pon</Copyright>
       <PackageLicenseExpression>MIT</PackageLicenseExpression>
-      <PackageProjectUrl>https://github.com/usausa/amazon-lambda-extension</PackageProjectUrl>
+      <PackageProjectUrl>https://github.com/usausa/azure-functions-extension</PackageProjectUrl>
       <RepositoryType>git</RepositoryType>
   </PropertyGroup>
 
