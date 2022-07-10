@@ -126,6 +126,7 @@ internal sealed class QueryArrayBinding<TArray, TElement> : IBinding
 
 [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Performance", "CA1812:AvoidUninstantiatedInternalClasses", Justification = "Framework only")]
 internal sealed class QueryNullableArrayBinding<TArray, TElementUnderlying> : IBinding
+    where TElementUnderlying : struct
 {
     private readonly IValueProvider valueProvider;
 

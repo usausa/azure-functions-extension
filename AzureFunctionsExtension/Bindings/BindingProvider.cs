@@ -44,9 +44,10 @@ internal sealed class BindingProvider : IBindingProvider
             if (context.Parameter.ParameterType.IsArray)
             {
                 var elementType = context.Parameter.ParameterType.GetElementType()!;
-                var type = Nullable.GetUnderlyingType(elementType) is null
+                var underlyingElementType = Nullable.GetUnderlyingType(elementType);
+                var type = underlyingElementType is null
                     ? typeof(QueryArrayBinding<,>).MakeGenericType(context.Parameter.ParameterType, elementType)
-                    : typeof(QueryNullableArrayBinding<,>).MakeGenericType(context.Parameter.ParameterType, elementType);
+                    : typeof(QueryNullableArrayBinding<,>).MakeGenericType(context.Parameter.ParameterType, underlyingElementType);
                 var binding = (IBinding)Activator.CreateInstance(type, propertyName, httpContextAccessor, context.Parameter)!;
                 return Task.FromResult(binding);
             }

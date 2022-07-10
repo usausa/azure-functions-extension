@@ -17,7 +17,7 @@ public class Function
         this.log = log;
     }
 
-    [FunctionName("Function")]
+    [FunctionName("Query")]
     [System.Diagnostics.CodeAnalysis.SuppressMessage("Style", "IDE0060", Justification = "Ignore")]
     public IActionResult Query(
         [HttpTrigger(AuthorizationLevel.Anonymous, "get", Route = "query")] HttpRequest req,
@@ -30,6 +30,43 @@ public class Function
         return Results.Of(new QueryResponse
         {
             Result = a + (b ?? 0) + c
+        });
+    }
+
+    [FunctionName("Array")]
+    [System.Diagnostics.CodeAnalysis.SuppressMessage("Style", "IDE0060", Justification = "Ignore")]
+    public IActionResult Array(
+        [HttpTrigger(AuthorizationLevel.Anonymous, "get", Route = "array")] HttpRequest req,
+        [BindQuery] int[] a,
+        [BindQuery] int?[] b)
+    {
+        log.LogInformation("Query array request. a.Length=[{A}], b.Length=[{B}]", a.Length, b.Length);
+
+        return Results.Of(new QueryResponse
+        {
+            Result = a.Sum() + b.Sum(x => x ?? 0)
+        });
+    }
+
+    [FunctionName("Body")]
+    [System.Diagnostics.CodeAnalysis.SuppressMessage("Style", "IDE0060", Justification = "Ignore")]
+    public IActionResult Body(
+        [HttpTrigger(AuthorizationLevel.Function, "post", Route = "body")] HttpRequest req,
+        [BindBody] BodyRequest request)
+    {
+        if (!ValidationHelper.Validate(request))
+        {
+            return new BadRequestResult();
+        }
+
+        log.LogInformation("Body request. id=[{Id}], name=[{Name}], flag=[{Flag}], dateTime=[{DateTime:yyyy/MM/dd HH:mm:ss}]", request.Id, request.Name, request.Flag, request.DateTime);
+
+        return Results.Of(new BodyResponse
+        {
+            Id = request.Id,
+            Name = request.Name,
+            Flag = request.Flag,
+            DateTime = DateTime.Now
         });
     }
 }
