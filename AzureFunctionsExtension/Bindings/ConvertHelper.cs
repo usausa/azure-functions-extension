@@ -89,8 +89,6 @@ internal static class ConvertHelper
 
     private static class TypeConverterConverter<T>
     {
-        private static readonly Type Type = typeof(T);
-
         private static readonly TypeConverter Converter = TypeDescriptor.GetConverter(typeof(T));
 
         [System.Diagnostics.CodeAnalysis.SuppressMessage("Design", "CA1031:Do not catch general exception types", Justification = "Ignore")]
@@ -98,7 +96,7 @@ internal static class ConvertHelper
         {
             try
             {
-                result = (T)Converter.ConvertTo(value, Type)!;
+                result = (T)Converter.ConvertFrom(value)!;
                 return true;
             }
             catch (Exception)
