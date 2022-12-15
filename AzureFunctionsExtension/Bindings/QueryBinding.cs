@@ -32,7 +32,7 @@ internal sealed class QueryBinding<T, TConvert> : IBinding
 
     public ParameterDescriptor ToParameterDescriptor() => new();
 
-    private class ValueProvider : IValueProvider
+    private sealed class ValueProvider : IValueProvider
     {
         private readonly IHttpContextAccessor httpContextAccessor;
 
@@ -87,7 +87,7 @@ internal sealed class QueryArrayBinding<TArray, TElement> : IBinding
 
     public ParameterDescriptor ToParameterDescriptor() => new();
 
-    private class ValueProvider : IValueProvider
+    private sealed class ValueProvider : IValueProvider
     {
         private readonly IHttpContextAccessor httpContextAccessor;
 
@@ -149,7 +149,7 @@ internal sealed class QueryNullableArrayBinding<TArray, TElementUnderlying> : IB
 
     public ParameterDescriptor ToParameterDescriptor() => new();
 
-    private class ValueProvider : IValueProvider
+    private sealed class ValueProvider : IValueProvider
     {
         private readonly IHttpContextAccessor httpContextAccessor;
 

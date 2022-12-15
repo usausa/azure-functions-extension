@@ -32,7 +32,7 @@ internal sealed class BodyBinding<T> : IBinding
 
     public ParameterDescriptor ToParameterDescriptor() => new();
 
-    private class ValueProvider : IValueProvider
+    private sealed class ValueProvider : IValueProvider
     {
         private readonly IHttpContextAccessor httpContextAccessor;
 
