@@ -17,7 +17,7 @@ public sealed class SystemTextJsonResultExecutor : IActionResultExecutor<SystemT
     private static readonly string DefaultContentType = new MediaTypeHeaderValue("application/json")
     {
         Encoding = Encoding.UTF8
-    }.ToString();
+    }.ToString()!;
 
     private readonly JsonSerializerOptions options;
 
