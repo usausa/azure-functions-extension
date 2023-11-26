@@ -8,7 +8,7 @@ using Microsoft.AspNetCore.Http;
 using Microsoft.Azure.WebJobs.Host.Bindings;
 using Microsoft.Azure.WebJobs.Host.Protocols;
 
-[System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Performance", "CA1812:AvoidUninstantiatedInternalClasses", Justification = "Framework only")]
+[System.Diagnostics.CodeAnalysis.SuppressMessage("Performance", "CA1812:AvoidUninstantiatedInternalClasses", Justification = "Framework only")]
 internal sealed class QueryBinding<T, TConvert> : IBinding
 {
     private readonly IValueProvider valueProvider;
@@ -63,7 +63,7 @@ internal sealed class QueryBinding<T, TConvert> : IBinding
     }
 }
 
-[System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Performance", "CA1812:AvoidUninstantiatedInternalClasses", Justification = "Framework only")]
+[System.Diagnostics.CodeAnalysis.SuppressMessage("Performance", "CA1812:AvoidUninstantiatedInternalClasses", Justification = "Framework only")]
 internal sealed class QueryArrayBinding<TArray, TElement> : IBinding
 {
     private readonly IValueProvider valueProvider;
@@ -124,7 +124,7 @@ internal sealed class QueryArrayBinding<TArray, TElement> : IBinding
     }
 }
 
-[System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Performance", "CA1812:AvoidUninstantiatedInternalClasses", Justification = "Framework only")]
+[System.Diagnostics.CodeAnalysis.SuppressMessage("Performance", "CA1812:AvoidUninstantiatedInternalClasses", Justification = "Framework only")]
 internal sealed class QueryNullableArrayBinding<TArray, TElementUnderlying> : IBinding
     where TElementUnderlying : struct
 {

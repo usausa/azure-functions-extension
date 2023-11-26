@@ -44,7 +44,7 @@ public class Function
 
         return Results.Of(new QueryResponse
         {
-            Result = a.Sum() + b.Sum(x => x ?? 0)
+            Result = a.Sum() + b.Sum(static x => x ?? 0)
         });
     }
 

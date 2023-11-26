@@ -25,7 +25,7 @@ internal sealed class BindingProvider : IBindingProvider
     public Task<IBinding> TryCreateAsync(BindingProviderContext context)
     {
         var bindingAttribute = context.Parameter.CustomAttributes
-            .First(attr => attr.AttributeType.CustomAttributes.Any(tag => tag.AttributeType == typeof(BindingAttribute)));
+            .First(static attr => attr.AttributeType.CustomAttributes.Any(tag => tag.AttributeType == typeof(BindingAttribute)));
 
         if (bindingAttribute.AttributeType == typeof(BindBodyAttribute))
         {
@@ -37,7 +37,7 @@ internal sealed class BindingProvider : IBindingProvider
         {
             var propertyName = bindingAttribute
                 .NamedArguments
-                .FirstOrDefault(arg => arg.MemberName == nameof(BindQueryAttribute.Name))
+                .FirstOrDefault(static arg => arg.MemberName == nameof(BindQueryAttribute.Name))
                 .TypedValue
                 .Value
                 ?.ToString() ?? context.Parameter.Name!;
