@@ -400,6 +400,3 @@ FodyWeavers.xsd
 # Customize
 desktop.ini
 __*
-/Publish/
-/Log/
-/Storage/
