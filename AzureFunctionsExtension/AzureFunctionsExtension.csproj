@@ -9,7 +9,6 @@
     <PackageId>AzureFunctionsExtension</PackageId>
     <Title>AzureFunctionsExtension</Title>
     <Description>Azure Functions extension.</Description>
-    <Summary>Azure Functions extension.</Summary>
     <PackageTags>azure functions</PackageTags>
   </PropertyGroup>
 
