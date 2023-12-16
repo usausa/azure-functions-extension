@@ -7,7 +7,7 @@ using Microsoft.AspNetCore.Http;
 using Microsoft.Azure.WebJobs.Host.Config;
 using Microsoft.Extensions.Options;
 
-[System.Diagnostics.CodeAnalysis.SuppressMessage("Performance", "CA1812:AvoidUninstantiatedInternalClasses", Justification = "Framework only")]
+#pragma warning disable CA1812
 internal sealed class BindingConfiguration : IExtensionConfigProvider
 {
     private readonly BindingProvider bindingProvider;
@@ -27,3 +27,4 @@ internal sealed class BindingConfiguration : IExtensionConfigProvider
             .Bind(bindingProvider);
     }
 }
+#pragma warning restore CA1812

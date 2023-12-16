@@ -8,7 +8,7 @@ using Microsoft.AspNetCore.Http;
 using Microsoft.Azure.WebJobs.Host.Bindings;
 using Microsoft.Azure.WebJobs.Host.Protocols;
 
-[System.Diagnostics.CodeAnalysis.SuppressMessage("Performance", "CA1812:AvoidUninstantiatedInternalClasses", Justification = "Framework only")]
+#pragma warning disable CA1812
 internal sealed class BodyBinding<T> : IBinding
 {
     private readonly IValueProvider valueProvider;
@@ -63,3 +63,4 @@ internal sealed class BodyBinding<T> : IBinding
         public string ToInvokeString() => string.Empty;
     }
 }
+#pragma warning restore CA1812

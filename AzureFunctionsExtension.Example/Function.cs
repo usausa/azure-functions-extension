@@ -8,6 +8,7 @@ using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Logging;
 
+#pragma warning disable IDE0060
 public class Function
 {
     private readonly ILogger<Function> log;
@@ -18,7 +19,6 @@ public class Function
     }
 
     [FunctionName("Query")]
-    [System.Diagnostics.CodeAnalysis.SuppressMessage("Style", "IDE0060", Justification = "Ignore")]
     public IActionResult Query(
         [HttpTrigger(AuthorizationLevel.Anonymous, "get", Route = "query")] HttpRequest req,
         [BindQuery] int a,
@@ -34,7 +34,6 @@ public class Function
     }
 
     [FunctionName("Array")]
-    [System.Diagnostics.CodeAnalysis.SuppressMessage("Style", "IDE0060", Justification = "Ignore")]
     public IActionResult Array(
         [HttpTrigger(AuthorizationLevel.Anonymous, "get", Route = "array")] HttpRequest req,
         [BindQuery] int[] a,
@@ -49,7 +48,6 @@ public class Function
     }
 
     [FunctionName("Body")]
-    [System.Diagnostics.CodeAnalysis.SuppressMessage("Style", "IDE0060", Justification = "Ignore")]
     public IActionResult Body(
         [HttpTrigger(AuthorizationLevel.Function, "post", Route = "body")] HttpRequest req,
         [BindBody] BodyRequest request)
@@ -70,3 +68,4 @@ public class Function
         });
     }
 }
+#pragma warning restore IDE0060

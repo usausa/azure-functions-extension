@@ -5,7 +5,7 @@ using AzureFunctionsExtension.Bindings;
 using Microsoft.Azure.WebJobs;
 using Microsoft.Azure.WebJobs.Hosting;
 
-[System.Diagnostics.CodeAnalysis.SuppressMessage("Performance", "CA1812:AvoidUninstantiatedInternalClasses", Justification = "Framework only")]
+#pragma warning disable CA1812
 internal sealed class BindingStartup : IWebJobsStartup
 {
     public void Configure(IWebJobsBuilder builder)
@@ -13,3 +13,4 @@ internal sealed class BindingStartup : IWebJobsStartup
         builder.AddExtension<BindingConfiguration>();
     }
 }
+#pragma warning restore CA1812
