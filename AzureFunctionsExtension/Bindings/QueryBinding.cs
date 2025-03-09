@@ -8,6 +8,8 @@ using Microsoft.AspNetCore.Http;
 using Microsoft.Azure.WebJobs.Host.Bindings;
 using Microsoft.Azure.WebJobs.Host.Protocols;
 
+using StringConvertHelper;
+
 #pragma warning disable CA1812
 internal sealed class QueryBinding<T, TConvert> : IBinding
 {
@@ -53,7 +55,7 @@ internal sealed class QueryBinding<T, TConvert> : IBinding
         {
             if (httpContextAccessor.HttpContext.Request.Query.TryGetValue(name, out var value))
             {
-                return Task.FromResult(ConvertHelper.Converter<TConvert>.TryConverter(value, out var result) ? result : defaultValue);
+                return Task.FromResult(StringConvert.TryConvert<TConvert>(value, out var result) ? result : defaultValue);
             }
 
             return Task.FromResult(defaultValue);
@@ -112,7 +114,7 @@ internal sealed class QueryArrayBinding<TArray, TElement> : IBinding
                 var results = new TElement[values.Count];
                 for (var i = 0; i < results.Length; i++)
                 {
-                    results[i] = ConvertHelper.Converter<TElement>.TryConverter(values[i], out var result) ? result : default!;
+                    results[i] = StringConvert.TryConvert<TElement>(values[i], out var result) ? result : default!;
                 }
 
                 return Task.FromResult<object?>(results);
@@ -175,7 +177,7 @@ internal sealed class QueryNullableArrayBinding<TArray, TElementUnderlying> : IB
                 var results = new TElementUnderlying?[values.Count];
                 for (var i = 0; i < results.Length; i++)
                 {
-                    results[i] = ConvertHelper.Converter<TElementUnderlying>.TryConverter(values[i], out var result) ? result : default!;
+                    results[i] = StringConvert.TryConvert<TElementUnderlying>(values[i], out var result) ? result : default!;
                 }
 
                 return Task.FromResult<object?>(results);
