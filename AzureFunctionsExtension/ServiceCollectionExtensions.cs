@@ -10,7 +10,7 @@ public static class ServiceCollectionExtensions
 {
     public static IServiceCollection AddAzureFunctionExtension(this IServiceCollection services)
     {
-        return AddAzureFunctionExtension(services, static _ => { });
+        return services.AddAzureFunctionExtension(static _ => { });
     }
 
     public static IServiceCollection AddAzureFunctionExtension(this IServiceCollection services, Action<JsonOptions> action)
