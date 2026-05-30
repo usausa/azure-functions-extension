@@ -1,16 +1,29 @@
 namespace AzureFunctionsExtension.Example;
 
+using AzureFunctionsExtension;
 using AzureFunctionsExtension.Annotations;
 
-using Microsoft.AspNetCore.Http;
-using Microsoft.AspNetCore.Mvc;
-using Microsoft.Azure.WebJobs;
-using Microsoft.Azure.WebJobs.Extensions.Http;
+using Microsoft.Azure.Functions.Worker;
 using Microsoft.Extensions.Logging;
 
-#pragma warning disable IDE0060
-public class Function
+using IActionResult = Microsoft.AspNetCore.Mvc.IActionResult;
+
+[AzureFunction]
+[ServiceResolver(typeof(ServiceResolver))]
+internal sealed partial class Function
 {
+    private static readonly Action<ILogger, int, int?, int, Exception?> QueryRequest =
+        LoggerMessage.Define<int, int?, int>(LogLevel.Information, new EventId(1, nameof(Query)), "Query request. a=[{A}], b=[{B}], c=[{C}]");
+
+    private static readonly Action<ILogger, int, int, Exception?> QueryArrayRequest =
+        LoggerMessage.Define<int, int>(LogLevel.Information, new EventId(2, nameof(Array)), "Query array request. a.Length=[{A}], b.Length=[{B}]");
+
+    private static readonly Action<ILogger, int, string, bool, DateTime, Exception?> BodyRequestLog =
+        LoggerMessage.Define<int, string, bool, DateTime>(LogLevel.Information, new EventId(3, nameof(Body)), "Body request. id=[{Id}], name=[{Name}], flag=[{Flag}], dateTime=[{DateTime:yyyy/MM/dd HH:mm:ss}]");
+
+    private static readonly Action<ILogger, DateTime, Exception?> TimerTriggered =
+        LoggerMessage.Define<DateTime>(LogLevel.Information, new EventId(4, nameof(Timer)), "Timer triggered at: {Time}");
+
     private readonly ILogger<Function> log;
 
     public Function(ILogger<Function> log)
@@ -18,54 +31,42 @@ public class Function
         this.log = log;
     }
 
-    [FunctionName("Query")]
+    [HttpEndpoint("get", "query", AuthorizationLevel.Anonymous)]
     public IActionResult Query(
-        [HttpTrigger(AuthorizationLevel.Anonymous, "get", Route = "query")] HttpRequest req,
-        [BindQuery] int a,
-        [BindQuery] int? b,
-        [BindQuery] int c = 3)
+        [FromQuery] int a,
+        [FromQuery] int? b,
+        [FromQuery] int c = 3)
     {
-        log.LogInformation("Query request. a=[{A}], b=[{B}], c=[{C}]", a, b, c);
-
-        return Results.Of(new QueryResponse
-        {
-            Result = a + (b ?? 0) + c
-        });
+        QueryRequest(log, a, b, c, null);
+        return Results.Of(new QueryResponse { Result = a + (b ?? 0) + c });
     }
 
-    [FunctionName("Array")]
+    [HttpEndpoint("get", "array", AuthorizationLevel.Anonymous)]
     public IActionResult Array(
-        [HttpTrigger(AuthorizationLevel.Anonymous, "get", Route = "array")] HttpRequest req,
-        [BindQuery] int[] a,
-        [BindQuery] int?[] b)
+        [FromQuery] int[] a,
+        [FromQuery] int?[] b)
     {
-        log.LogInformation("Query array request. a.Length=[{A}], b.Length=[{B}]", a.Length, b.Length);
-
-        return Results.Of(new QueryResponse
-        {
-            Result = a.Sum() + b.Sum(static x => x ?? 0)
-        });
+        QueryArrayRequest(log, a.Length, b.Length, null);
+        return Results.Of(new QueryResponse { Result = a.Sum() + b.Sum(static x => x ?? 0) });
     }
 
-    [FunctionName("Body")]
-    public IActionResult Body(
-        [HttpTrigger(AuthorizationLevel.Function, "post", Route = "body")] HttpRequest req,
-        [BindBody] BodyRequest request)
+    [HttpEndpoint("post", "body", AuthorizationLevel.Function)]
+    public IActionResult Body([FromBody] BodyRequest request)
     {
-        if (!ValidationHelper.Validate(request))
-        {
-            return new BadRequestResult();
-        }
-
-        log.LogInformation("Body request. id=[{Id}], name=[{Name}], flag=[{Flag}], dateTime=[{DateTime:yyyy/MM/dd HH:mm:ss}]", request.Id, request.Name, request.Flag, request.DateTime);
-
+        BodyRequestLog(log, request.Id, request.Name, request.Flag, request.DateTime, null);
         return Results.Of(new BodyResponse
         {
             Id = request.Id,
             Name = request.Name,
             Flag = request.Flag,
-            DateTime = DateTime.Now
+            DateTime = DateTime.Now,
         });
     }
+
+    [TimerEndpoint("0 */5 * * * *")]
+    public void Timer([FromTrigger] TimerInfo timerInfo)
+    {
+        _ = timerInfo;
+        TimerTriggered(log, DateTime.UtcNow, null);
+    }
 }
-#pragma warning restore IDE0060

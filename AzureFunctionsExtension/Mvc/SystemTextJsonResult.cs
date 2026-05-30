@@ -1,8 +1,11 @@
 namespace AzureFunctionsExtension.Mvc;
 
+using System.Diagnostics.CodeAnalysis;
+using System.Text.Json;
+
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Options;
 
 public class SystemTextJsonResult : ActionResult
 {
@@ -16,10 +19,19 @@ public class SystemTextJsonResult : ActionResult
 
     public object? Value { get; set; }
 
-    public override Task ExecuteResultAsync(ActionContext context)
+    [UnconditionalSuppressMessage("ReflectionAnalysis", "IL2026", Justification = "Result serialization preserves the existing API shape.")]
+    [UnconditionalSuppressMessage("ReflectionAnalysis", "IL3050", Justification = "Result serialization preserves the existing API shape.")]
+    public override async Task ExecuteResultAsync(ActionContext context)
     {
-        var services = context.HttpContext.RequestServices;
-        var executor = services.GetRequiredService<SystemTextJsonResultExecutor>();
-        return executor.ExecuteAsync(context, this);
+        var response = context.HttpContext.Response;
+        response.StatusCode = StatusCode ?? StatusCodes.Status200OK;
+        response.ContentType = "application/json";
+
+        var options = context.HttpContext.RequestServices
+            .GetService(typeof(IOptions<global::AzureFunctionsExtension.JsonOptions>)) is IOptions<global::AzureFunctionsExtension.JsonOptions> jsonOpts
+            ? jsonOpts.Value.Options
+            : null;
+
+        await JsonSerializer.SerializeAsync(response.Body, Value, Value?.GetType() ?? typeof(object), options).ConfigureAwait(false);
     }
 }

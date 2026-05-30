@@ -2,28 +2,31 @@ namespace AzureFunctionsExtension.Example;
 
 using System.ComponentModel.DataAnnotations;
 
-public class QueryResponse
+internal sealed class QueryResponse
 {
     public int Result { get; set; }
 }
 
-public class BodyRequest
+internal sealed class BodyRequest
 {
+    public static BodyRequest Empty { get; } = new();
+
+    [Required]
     public int Id { get; set; }
 
     [Required]
-    public string Name { get; set; } = default!;
+    public string Name { get; set; } = string.Empty;
 
     public bool Flag { get; set; }
 
     public DateTime DateTime { get; set; }
 }
 
-public class BodyResponse
+internal sealed class BodyResponse
 {
     public int Id { get; set; }
 
-    public string Name { get; set; } = default!;
+    public string? Name { get; set; }
 
     public bool Flag { get; set; }
 

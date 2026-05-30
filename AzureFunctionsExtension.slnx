@@ -1,17 +1,12 @@
 <Solution>
   <Folder Name="/Solution Items/">
     <File Path=".editorconfig" />
-    <File Path=".gitattributes" />
-    <File Path=".gitignore" />
-    <File Path="AGENTS.md" />
     <File Path="Analyzers.ruleset" />
-    <File Path="AzureFunctionsExtension.sln.DotSettings" />
-    <File Path="CLAUDE.md" />
     <File Path="Directory.Build.props" />
     <File Path="Directory.Build.targets" />
-    <File Path="LICENSE" />
-    <File Path="README.md" />
   </Folder>
-  <Project Path="AzureFunctionsExtension/AzureFunctionsExtension.csproj" />
-  <Project Path="AzureFunctionsExtension.Example/AzureFunctionsExtension.Example.csproj" />
+  <Project Path="AzureFunctionsExtension\AzureFunctionsExtension.csproj" />
+  <Project Path="AzureFunctionsExtension.Generator\AzureFunctionsExtension.Generator.csproj" />
+  <Project Path="AzureFunctionsExtension.Example\AzureFunctionsExtension.Example.csproj" />
+  <Project Path="AzureFunctionsExtension.Tests\AzureFunctionsExtension.Tests.csproj" />
 </Solution>
