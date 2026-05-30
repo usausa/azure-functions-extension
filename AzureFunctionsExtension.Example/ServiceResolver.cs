@@ -10,6 +10,8 @@ internal static class ServiceResolver
         var services = new ServiceCollection();
         services.AddAzureFunctionExtension();
         services.AddLogging(static b => b.AddConsole());
+        services.AddSingleton<IGreetingService>(new GreetingService());
+        services.AddSingleton(new LoggingFilter());
         return services;
     }
 }

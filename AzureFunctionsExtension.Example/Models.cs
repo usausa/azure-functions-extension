@@ -32,3 +32,24 @@ internal sealed class BodyResponse
 
     public DateTime DateTime { get; set; }
 }
+
+internal sealed class ItemResponse
+{
+    public int Id { get; set; }
+
+    public string Name { get; set; } = string.Empty;
+}
+
+internal sealed class GreetRequest
+{
+    public static GreetRequest Empty { get; } = new();
+
+    public string Name { get; set; } = string.Empty;
+}
+
+internal sealed class GreetResponse
+{
+    public static GreetResponse Empty { get; } = new();
+
+    public string Message { get; set; } = string.Empty;
+}
