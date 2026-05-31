@@ -60,9 +60,7 @@ internal static class ModelBuilder
             .OrderByDescending(static c => c.Parameters.Length)
             .FirstOrDefault();
 
-        var ctorParams = ctor != null
-            ? ctor.Parameters.Select(static p => MakeTypeRef(p.Type)).ToArray()
-            : [];
+        var ctorParams = ctor?.Parameters.Select(static p => MakeTypeRef(p.Type)).ToArray() ?? [];
 
         // ServiceResolver 属性を解析して DI コンテナ構成メソッドを確認する
         // Inspect ServiceResolver attribute to verify DI container configuration method
@@ -343,7 +341,7 @@ internal static class ModelBuilder
             2 => "Function",
             3 => "System",
             4 => "Admin",
-            _ => "Function",
+            _ => "Function"
         };
     }
 
@@ -524,7 +522,7 @@ internal static class ModelBuilder
             "System.Guid" => "TryToGuid",
             "string" or "System.String" => string.Empty,
             _ when type.TypeKind == TypeKind.Enum => "TryToEnum",
-            _ => string.Empty,
+            _ => string.Empty
         };
     }
 
