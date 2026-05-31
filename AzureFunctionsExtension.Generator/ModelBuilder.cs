@@ -31,11 +31,14 @@ internal static class ModelBuilder
     private const string FunctionContextFullName = "Microsoft.Azure.Functions.Worker.FunctionContext";
     private const string CancellationTokenFullName = "System.Threading.CancellationToken";
 
+    // [AzureFunctionAttribute] が付与されたクラスから FunctionModel を構築するエントリーポイント。
+    // Entry point: builds a FunctionModel from the class decorated with [AzureFunctionAttribute].
     public static Result<FunctionModel> BuildFunctionModel(GeneratorAttributeSyntaxContext context)
     {
         var syntax = (ClassDeclarationSyntax)context.TargetNode;
         var symbol = (INamedTypeSymbol)context.TargetSymbol;
 
+        // partial クラスでなければエラーを返す / Fail if the class is not partial
         var isPartial = syntax.Modifiers.Any(static m => m.IsKind(SyntaxKind.PartialKeyword));
         if (!isPartial)
         {
@@ -43,12 +46,15 @@ internal static class ModelBuilder
                 Diagnostics.NotPartialClass, syntax.GetLocation(), symbol.Name));
         }
 
+        // 名前空間・クラス型参照を取得する / Resolve namespace and type reference
         var ns = String.IsNullOrEmpty(symbol.ContainingNamespace.Name)
             ? string.Empty
             : symbol.ContainingNamespace.ToDisplayString();
 
         var functionType = MakeTypeRef(symbol);
 
+        // 最もパラメータ数が多い public コンストラクタを選択する
+        // Select the public constructor with the most parameters
         var ctor = symbol.InstanceConstructors
             .Where(static c => c.DeclaredAccessibility == Accessibility.Public)
             .OrderByDescending(static c => c.Parameters.Length)
@@ -58,6 +64,8 @@ internal static class ModelBuilder
             ? ctor.Parameters.Select(static p => MakeTypeRef(p.Type)).ToArray()
             : [];
 
+        // ServiceResolver 属性を解析して DI コンテナ構成メソッドを確認する
+        // Inspect ServiceResolver attribute to verify DI container configuration method
         ServiceResolverModel? serviceResolver = null;
         var serviceResolverAttr = symbol.GetAttributes()
             .FirstOrDefault(static a => a.AttributeClass?.ToDisplayString() == ServiceResolverAttributeName);
@@ -87,6 +95,8 @@ internal static class ModelBuilder
                 Diagnostics.MissingServiceResolver, syntax.GetLocation(), symbol.Name));
         }
 
+        // Filter 属性を収集し、Order で昇順ソートしてパイプライン順序を確定する
+        // Collect Filter attributes and sort by Order to determine pipeline sequence
         var filterAttrs = symbol.GetAttributes()
             .Select(static (a, i) => (Attr: a, Index: i))
             .Where(static x => IsFilterAttribute(x.Attr))
@@ -119,6 +129,8 @@ internal static class ModelBuilder
             return Results.Error<FunctionModel>(diagnostics[0]);
         }
 
+        // クラスの各メソッドを走査してハンドラーモデルを構築する
+        // Iterate class members to build handler models
         var handlers = new List<HandlerModel>();
         foreach (var member in symbol.GetMembers().OfType<IMethodSymbol>())
         {
@@ -186,6 +198,8 @@ internal static class ModelBuilder
         return type.AllInterfaces.Any(i => i.ToDisplayString() == interfaceFullName);
     }
 
+    // メソッドのエンドポイント属性 (Http/Timer/Queue) を解析してハンドラーの種類と設定を決定する。
+    // Analyzes endpoint attributes (Http/Timer/Queue) on a method to determine handler kind and configuration.
     private static HandlerModel? BuildHandlerModel(IMethodSymbol method, List<DiagnosticInfo> diagnostics)
     {
         HandlerKind? kind = null;
@@ -231,11 +245,15 @@ internal static class ModelBuilder
             }
         }
 
+        // エンドポイント属性がなければハンドラーではないのでスキップ
+        // Skip if no endpoint attribute is present
         if (kind == null)
         {
             return null;
         }
 
+        // 複数のエンドポイント属性が付いている場合はエラー
+        // Error if multiple endpoint attributes are applied
         if (handlerAttrCount > 1)
         {
             var loc = method.Locations.Length > 0 ? method.Locations[0] : null;
@@ -243,6 +261,8 @@ internal static class ModelBuilder
             return null;
         }
 
+        // 各パラメータのバインディング種別を解決してパラメータモデルを構築する
+        // Resolve binding kind for each parameter and build parameter models
         var parameters = new List<ParameterModel>();
         foreach (var param in method.Parameters)
         {
@@ -265,6 +285,8 @@ internal static class ModelBuilder
             parameters.Add(paramModel);
         }
 
+        // 戻り値の型を解析して非同期かどうかと結果型を確定する
+        // Analyze return type to determine async flag and actual result type
         var returnType = method.ReturnType;
         TypeRefModel? resultType;
         var isAsync = false;
@@ -325,6 +347,8 @@ internal static class ModelBuilder
         };
     }
 
+    // パラメータシンボルからバインディング属性を読み取り、ParameterModel を構築する。
+    // Reads binding attributes from a parameter symbol and builds a ParameterModel.
     private static ParameterModel BuildParameterModel(IParameterSymbol param, HandlerKind handlerKind)
     {
         var paramType = param.Type;
@@ -386,6 +410,8 @@ internal static class ModelBuilder
             }
         }
 
+        // バインディング属性がない場合は型名で特殊パラメータ (HttpRequest など) を自動判定する
+        // No binding attribute: auto-detect special parameters (HttpRequest, FunctionContext, etc.) by type name
         if (bindingAttrCount == 0)
         {
             var typeName = paramType.ToDisplayString();
@@ -417,6 +443,8 @@ internal static class ModelBuilder
             }
         }
 
+        // 明示的なデフォルト値があれば文字列リテラルとして保持する
+        // Preserve explicit default value as a string literal if present
         var hasDefault = param.HasExplicitDefaultValue;
         string? defaultValueLiteral = null;
         if (hasDefault)
@@ -500,6 +528,8 @@ internal static class ModelBuilder
         };
     }
 
+    // ITypeSymbol を TypeRefModel に変換する。配列・Nullable を考慮して再帰的に解決する。
+    // Converts an ITypeSymbol to TypeRefModel, recursively handling arrays and Nullable<T>.
     internal static TypeRefModel MakeTypeRef(ITypeSymbol type)
     {
         var isNullable = false;
