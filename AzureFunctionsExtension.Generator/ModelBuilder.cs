@@ -98,7 +98,7 @@ internal static class ModelBuilder
             .Select((x, idx) =>
             {
                 var filterType = x.Attr.AttributeClass!.TypeArguments[0];
-                return new FilterDescriptorModel(idx, MakeTypeRef(filterType), GetFilterOrder(x.Attr));
+                return new FilterDescriptorModel(MakeTypeRef(filterType), GetFilterOrder(x.Attr), idx);
             })
             .ToArray();
 
@@ -301,15 +301,15 @@ internal static class ModelBuilder
         return new HandlerModel(
             method.Name,
             kind.Value,
-            isAsync,
-            resultType,
-            new EquatableArray<ParameterModel>(parameters.ToArray()),
             httpMethod,
             route,
             authorizationLevel,
             timerSchedule,
             queueName,
-            queueConnection);
+            queueConnection,
+            isAsync,
+            resultType,
+            new EquatableArray<ParameterModel>(parameters.ToArray()));
     }
 
     private static string GetAuthorizationLevelName(int value)
@@ -516,17 +516,17 @@ internal static class ModelBuilder
         {
             return new TypeRefModel(
                 type.ToDisplayString(SymbolDisplayFormat.FullyQualifiedFormat),
-                false,
-                null,
                 true,
-                MakeTypeRef(arr.ElementType));
+                MakeTypeRef(arr.ElementType),
+                false,
+                null);
         }
 
         return new TypeRefModel(
             type.ToDisplayString(SymbolDisplayFormat.FullyQualifiedFormat),
-            isNullable,
-            underlyingType,
             false,
-            null);
+            null,
+            isNullable,
+            underlyingType);
     }
 }
