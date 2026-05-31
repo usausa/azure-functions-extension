@@ -99,7 +99,7 @@ internal sealed partial class Function
     public IActionResult Lookup([FromRoute] string name)
     {
         LookupLog(log, name, null);
-        if (string.IsNullOrWhiteSpace(name) || name == "unknown")
+        if (String.IsNullOrWhiteSpace(name) || (name == "unknown"))
         {
             throw new ApiException(404, $"Item '{name}' not found.");
         }

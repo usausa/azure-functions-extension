@@ -34,7 +34,7 @@ internal static class WrapperBuilder
         builder.EnableNullable();
         builder.NewLine();
 
-        if (!string.IsNullOrEmpty(model.Namespace))
+        if (!String.IsNullOrEmpty(model.Namespace))
         {
             builder.Namespace(model.Namespace);
             builder.NewLine();
@@ -55,7 +55,7 @@ internal static class WrapperBuilder
         builder.EnableNullable();
         builder.NewLine();
 
-        if (!string.IsNullOrEmpty(model.Namespace))
+        if (!String.IsNullOrEmpty(model.Namespace))
         {
             builder.Namespace(model.Namespace);
             builder.NewLine();
@@ -84,7 +84,7 @@ internal static class WrapperBuilder
         var hasBodyParam = handlers.Any(static h =>
             h.Parameters.AsArray().Any(static p => p.BindingKind == ParameterBindingKind.FromBody));
         var hasValidation = handlers.Any(static h =>
-            h.Parameters.AsArray().Any(static p => p.BindingKind == ParameterBindingKind.FromBody && !p.SkipValidation));
+            h.Parameters.AsArray().Any(static p => (p.BindingKind == ParameterBindingKind.FromBody) && !p.SkipValidation));
 
         if (model.ServiceResolver != null)
         {
@@ -92,7 +92,7 @@ internal static class WrapperBuilder
             builder.AppendLine($"    {BuildServiceProvider}({model.ServiceResolver.Type.FullName}.ConfigureServices());");
             builder.NewLine();
 
-            var ctorArgs = string.Join(", ", model.ConstructorParameters.AsArray().Select(static p => $"{GetRequiredService}<{p.FullName}>(__provider__)"));
+            var ctorArgs = String.Join(", ", model.ConstructorParameters.AsArray().Select(static p => $"{GetRequiredService}<{p.FullName}>(__provider__)"));
             builder.AppendLine($"private static readonly {model.FunctionType.FullName} __target__ = new {model.FunctionType.FullName}({ctorArgs});");
         }
         else
@@ -393,7 +393,6 @@ internal static class WrapperBuilder
     {
         var pVar = $"p{index}";
         var typeName = param.Type.FullName;
-        var key = param.Key;
 
         switch (param.BindingKind)
         {
@@ -446,7 +445,7 @@ internal static class WrapperBuilder
         var key = param.Key;
         var defaultLiteral = param.HasDefault ? (param.DefaultValueLiteral ?? "default") : null;
 
-        if (param.Type.IsArray && param.Type.ElementType != null)
+        if (param.Type.IsArray && (param.Type.ElementType != null))
         {
             var elemType = param.Type.ElementType.FullName;
             var converterMethod = param.ConverterMethod;
@@ -458,7 +457,7 @@ internal static class WrapperBuilder
             builder.AppendLine($"{pVar} = new {elemType}[{pVar}parts.Length];");
             builder.AppendLine($"for (var i = 0; i < {pVar}parts.Length; i++)");
             builder.BeginBlock();
-            if (string.IsNullOrEmpty(converterMethod))
+            if (String.IsNullOrEmpty(converterMethod))
             {
                 builder.AppendLine($"{pVar}[i] = {pVar}parts[i];");
             }
@@ -483,7 +482,7 @@ internal static class WrapperBuilder
             builder.EndBlock();
             builder.NewLine();
         }
-        else if (param.Type.IsNullable && param.Type.UnderlyingType != null)
+        else if (param.Type.IsNullable && (param.Type.UnderlyingType != null))
         {
             var baseType = param.Type.UnderlyingType.FullName;
             var converterMethod = param.ConverterMethod;
@@ -491,7 +490,7 @@ internal static class WrapperBuilder
             builder.AppendLine($"if ({dictExpr}.TryGetValue(\"{key}\", out var {pRaw}) &&");
             builder.AppendLine($"    {pRaw} != global::Microsoft.Extensions.Primitives.StringValues.Empty)");
             builder.BeginBlock();
-            if (string.IsNullOrEmpty(converterMethod))
+            if (String.IsNullOrEmpty(converterMethod))
             {
                 builder.AppendLine($"{pVar} = {pRaw};");
             }
@@ -519,7 +518,7 @@ internal static class WrapperBuilder
         else
         {
             var converterMethod = param.ConverterMethod;
-            if (string.IsNullOrEmpty(converterMethod))
+            if (String.IsNullOrEmpty(converterMethod))
             {
                 var init = defaultLiteral != null ? $"({typeName}){defaultLiteral}!" : $"default({typeName})!";
                 builder.AppendLine($"var {pVar} = {init};");
@@ -564,13 +563,13 @@ internal static class WrapperBuilder
         var key = param.Key;
         var converterMethod = param.ConverterMethod;
 
-        if (param.Type.IsNullable && param.Type.UnderlyingType != null)
+        if (param.Type.IsNullable && (param.Type.UnderlyingType != null))
         {
             var baseType = param.Type.UnderlyingType.FullName;
             builder.AppendLine($"var {pVar} = ({typeName})null;");
             builder.AppendLine($"if (req.RouteValues.TryGetValue(\"{key}\", out var {pRaw}obj) && {pRaw}obj is string {pRaw})");
             builder.BeginBlock();
-            if (string.IsNullOrEmpty(converterMethod))
+            if (String.IsNullOrEmpty(converterMethod))
             {
                 builder.AppendLine($"{pVar} = {pRaw};");
             }
@@ -602,7 +601,7 @@ internal static class WrapperBuilder
             builder.AppendLine($"var {pVar} = {init};");
             builder.AppendLine($"if (req.RouteValues.TryGetValue(\"{key}\", out var {pRaw}obj) && {pRaw}obj is string {pRaw})");
             builder.BeginBlock();
-            if (string.IsNullOrEmpty(converterMethod))
+            if (String.IsNullOrEmpty(converterMethod))
             {
                 builder.AppendLine($"{pVar} = {pRaw}!;");
             }
@@ -636,7 +635,7 @@ internal static class WrapperBuilder
         var key = param.Key;
         var converterMethod = param.ConverterMethod;
 
-        if (param.Type.IsNullable && param.Type.UnderlyingType != null)
+        if (param.Type.IsNullable && (param.Type.UnderlyingType != null))
         {
             var baseType = param.Type.UnderlyingType.FullName;
             builder.AppendLine($"var {pVar} = ({typeName})null;");
@@ -644,7 +643,7 @@ internal static class WrapperBuilder
             builder.AppendLine($"    {pRaw}sv != global::Microsoft.Extensions.Primitives.StringValues.Empty)");
             builder.BeginBlock();
             builder.AppendLine($"var {pRaw} = {pRaw}sv.ToString();");
-            if (string.IsNullOrEmpty(converterMethod))
+            if (String.IsNullOrEmpty(converterMethod))
             {
                 builder.AppendLine($"{pVar} = {pRaw};");
             }
@@ -672,7 +671,7 @@ internal static class WrapperBuilder
         else
         {
             var defaultLiteral = param.HasDefault ? (param.DefaultValueLiteral ?? "default") : null;
-            var init = string.IsNullOrEmpty(converterMethod)
+            var init = String.IsNullOrEmpty(converterMethod)
                 ? (defaultLiteral != null ? $"({typeName}){defaultLiteral}!" : $"default({typeName})!")
                 : (defaultLiteral != null ? $"({typeName}){defaultLiteral}" : $"default({typeName})");
             builder.AppendLine($"var {pVar} = {init};");
@@ -680,7 +679,7 @@ internal static class WrapperBuilder
             builder.AppendLine($"    {pRaw}sv != global::Microsoft.Extensions.Primitives.StringValues.Empty)");
             builder.BeginBlock();
             builder.AppendLine($"var {pRaw} = {pRaw}sv.ToString();");
-            if (string.IsNullOrEmpty(converterMethod))
+            if (String.IsNullOrEmpty(converterMethod))
             {
                 builder.AppendLine($"{pVar} = {pRaw}!;");
             }
@@ -743,7 +742,7 @@ internal static class WrapperBuilder
     private static string BuildCallArgs(HandlerModel handler, bool hasFilter, bool hasProvider)
     {
         var parameters = handler.Parameters.AsArray();
-        var argParts = new System.Collections.Generic.List<string>();
+        var argParts = new List<string>();
 
         for (var i = 0; i < parameters.Length; i++)
         {
@@ -773,12 +772,12 @@ internal static class WrapperBuilder
             }
         }
 
-        return string.Join(", ", argParts);
+        return String.Join(", ", argParts);
     }
 
     private static string ToPascalCase(string name)
     {
-        if (string.IsNullOrEmpty(name))
+        if (String.IsNullOrEmpty(name))
         {
             return name;
         }

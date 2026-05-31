@@ -60,7 +60,7 @@ public sealed class FunctionGenerator : IIncrementalGenerator
 
     private static string MakeFilename(string ns, string className, string methodName)
     {
-        if (string.IsNullOrEmpty(ns))
+        if (String.IsNullOrEmpty(ns))
         {
             return $"{className}__{methodName}.g.cs";
         }

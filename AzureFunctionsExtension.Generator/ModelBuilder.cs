@@ -43,7 +43,7 @@ internal static class ModelBuilder
                 Diagnostics.NotPartialClass, syntax.GetLocation(), symbol.Name));
         }
 
-        var ns = string.IsNullOrEmpty(symbol.ContainingNamespace.Name)
+        var ns = String.IsNullOrEmpty(symbol.ContainingNamespace.Name)
             ? string.Empty
             : symbol.ContainingNamespace.ToDisplayString();
 
@@ -68,9 +68,9 @@ internal static class ModelBuilder
             {
                 var configureMethod = resolverType.GetMembers("ConfigureServices")
                     .OfType<IMethodSymbol>()
-                    .FirstOrDefault(static m => m.IsStatic && m.DeclaredAccessibility == Accessibility.Public
-                        && m.Parameters.Length == 0
-                        && m.ReturnType.ToDisplayString() == IServiceCollectionFullName);
+                    .FirstOrDefault(static m => m.IsStatic && (m.DeclaredAccessibility == Accessibility.Public)
+                        && (m.Parameters.Length == 0)
+                        && (m.ReturnType.ToDisplayString() == IServiceCollectionFullName));
 
                 if (configureMethod == null)
                 {
@@ -122,7 +122,7 @@ internal static class ModelBuilder
         var handlers = new List<HandlerModel>();
         foreach (var member in symbol.GetMembers().OfType<IMethodSymbol>())
         {
-            if (member.MethodKind != MethodKind.Ordinary || member.IsStatic)
+            if ((member.MethodKind != MethodKind.Ordinary) || member.IsStatic)
             {
                 continue;
             }
@@ -249,10 +249,10 @@ internal static class ModelBuilder
             if (kind != HandlerKind.Http)
             {
                 var hasHttpOnlyAttr = param.GetAttributes().Any(a =>
-                    a.AttributeClass?.ToDisplayString() == FromQueryAttributeName ||
-                    a.AttributeClass?.ToDisplayString() == FromRouteAttributeName ||
-                    a.AttributeClass?.ToDisplayString() == FromHeaderAttributeName ||
-                    a.AttributeClass?.ToDisplayString() == FromBodyAttributeName);
+                    (a.AttributeClass?.ToDisplayString() == FromQueryAttributeName) ||
+                    (a.AttributeClass?.ToDisplayString() == FromRouteAttributeName) ||
+                    (a.AttributeClass?.ToDisplayString() == FromHeaderAttributeName) ||
+                    (a.AttributeClass?.ToDisplayString() == FromBodyAttributeName));
                 if (hasHttpOnlyAttr)
                 {
                     var loc = method.Locations.Length > 0 ? method.Locations[0] : null;
@@ -271,15 +271,15 @@ internal static class ModelBuilder
 
         if (returnType is INamedTypeSymbol namedReturn)
         {
-            if (namedReturn.OriginalDefinition.ToDisplayString() == "System.Threading.Tasks.Task<TResult>" ||
-                namedReturn.OriginalDefinition.ToDisplayString() == "System.Threading.Tasks.ValueTask<TResult>")
+            if ((namedReturn.OriginalDefinition.ToDisplayString() == "System.Threading.Tasks.Task<TResult>") ||
+                (namedReturn.OriginalDefinition.ToDisplayString() == "System.Threading.Tasks.ValueTask<TResult>"))
             {
                 isAsync = true;
                 var inner = namedReturn.TypeArguments[0];
                 resultType = MakeTypeRef(inner);
             }
-            else if (namedReturn.ToDisplayString() == "System.Threading.Tasks.Task" ||
-                     namedReturn.ToDisplayString() == "System.Threading.Tasks.ValueTask")
+            else if ((namedReturn.ToDisplayString() == "System.Threading.Tasks.Task") ||
+                     (namedReturn.ToDisplayString() == "System.Threading.Tasks.ValueTask"))
             {
                 isAsync = true;
                 resultType = null;
@@ -349,7 +349,7 @@ internal static class ModelBuilder
                 bindingAttrCount++;
                 bindingKind = ParameterBindingKind.FromQuery;
                 var nameArg = attr.ConstructorArguments.Length > 0 ? attr.ConstructorArguments[0].Value as string : null;
-                if (!string.IsNullOrEmpty(nameArg))
+                if (!String.IsNullOrEmpty(nameArg))
                 {
                     key = nameArg!;
                 }
@@ -359,7 +359,7 @@ internal static class ModelBuilder
                 bindingAttrCount++;
                 bindingKind = ParameterBindingKind.FromHeader;
                 var nameArg = attr.ConstructorArguments.Length > 0 ? attr.ConstructorArguments[0].Value as string : null;
-                if (!string.IsNullOrEmpty(nameArg))
+                if (!String.IsNullOrEmpty(nameArg))
                 {
                     key = nameArg!;
                 }
@@ -369,7 +369,7 @@ internal static class ModelBuilder
                 bindingAttrCount++;
                 bindingKind = ParameterBindingKind.FromRoute;
                 var nameArg = attr.ConstructorArguments.Length > 0 ? attr.ConstructorArguments[0].Value as string : null;
-                if (!string.IsNullOrEmpty(nameArg))
+                if (!String.IsNullOrEmpty(nameArg))
                 {
                     key = nameArg!;
                 }
@@ -404,8 +404,8 @@ internal static class ModelBuilder
                 bindingKind = ParameterBindingKind.CancellationToken;
                 converterMethod = string.Empty;
             }
-            else if (paramType is INamedTypeSymbol namedType &&
-                     namedType.OriginalDefinition.ToDisplayString() == "Microsoft.Extensions.Logging.ILogger<TCategoryName>")
+            else if ((paramType is INamedTypeSymbol namedType) &&
+                     (namedType.OriginalDefinition.ToDisplayString() == "Microsoft.Extensions.Logging.ILogger<TCategoryName>"))
             {
                 bindingKind = ParameterBindingKind.Logger;
                 converterMethod = string.Empty;
@@ -467,7 +467,7 @@ internal static class ModelBuilder
             return GetConverterMethod(arr.ElementType);
         }
 
-        if (type is INamedTypeSymbol named && named.OriginalDefinition.ToDisplayString() == "System.Nullable<T>")
+        if ((type is INamedTypeSymbol named) && (named.OriginalDefinition.ToDisplayString() == "System.Nullable<T>"))
         {
             return GetConverterMethod(named.TypeArguments[0]);
         }
@@ -505,8 +505,8 @@ internal static class ModelBuilder
         var isNullable = false;
         TypeRefModel? underlyingType = null;
 
-        if (type is INamedTypeSymbol namedType &&
-            namedType.OriginalDefinition.ToDisplayString() == "System.Nullable<T>")
+        if ((type is INamedTypeSymbol namedType) &&
+            (namedType.OriginalDefinition.ToDisplayString() == "System.Nullable<T>"))
         {
             isNullable = true;
             underlyingType = MakeTypeRef(namedType.TypeArguments[0]);
