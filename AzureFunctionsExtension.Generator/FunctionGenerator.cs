@@ -47,7 +47,7 @@ public sealed class FunctionGenerator : IIncrementalGenerator
                 MakeFilename(model.Namespace, model.ClassName, "__shared__"),
                 SourceText.From(builder.ToString(), Encoding.UTF8));
 
-            foreach (var handler in model.Handlers.AsArray())
+            foreach (var handler in model.Handlers)
             {
                 builder.Clear();
                 WrapperBuilder.Build(builder, model, handler);

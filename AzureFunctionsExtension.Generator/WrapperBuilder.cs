@@ -74,7 +74,7 @@ internal static class WrapperBuilder
         builder.AppendLine($"partial {classKeyword} {model.ClassName}");
         builder.BeginBlock();
 
-        if (model.Filters.AsArray().Length > 0)
+        if (model.Filters.Count > 0)
         {
             // フィルターがある場合：InnerMethod (実処理) とパイプラインを生成してから HandlerMethod を出力する
             // With filters: emit InnerMethod (actual logic) and pipeline, then the HandlerMethod entry point
@@ -95,11 +95,11 @@ internal static class WrapperBuilder
     // __bodySerializer__, __requestValidator__, and __filterN__ based on ServiceResolver presence.
     private static void BuildStaticFields(SourceBuilder builder, FunctionModel model)
     {
-        var handlers = model.Handlers.AsArray();
+        var handlers = model.Handlers;
         var hasBodyParam = handlers.Any(static h =>
-            h.Parameters.AsArray().Any(static p => p.BindingKind == ParameterBindingKind.FromBody));
+            h.Parameters.Any(static p => p.BindingKind == ParameterBindingKind.FromBody));
         var hasValidation = handlers.Any(static h =>
-            h.Parameters.AsArray().Any(static p => (p.BindingKind == ParameterBindingKind.FromBody) && !p.SkipValidation));
+            h.Parameters.Any(static p => (p.BindingKind == ParameterBindingKind.FromBody) && !p.SkipValidation));
 
         if (model.ServiceResolver != null)
         {
@@ -107,7 +107,7 @@ internal static class WrapperBuilder
             builder.AppendLine($"    {BuildServiceProvider}({model.ServiceResolver.Type.FullName}.ConfigureServices());");
             builder.NewLine();
 
-            var ctorArgs = String.Join(", ", model.ConstructorParameters.AsArray().Select(static p => $"{GetRequiredService}<{p.FullName}>(__provider__)"));
+            var ctorArgs = String.Join(", ", model.ConstructorParameters.Select(static p => $"{GetRequiredService}<{p.FullName}>(__provider__)"));
             builder.AppendLine($"private static readonly {model.FunctionType.FullName} __target__ = new {model.FunctionType.FullName}({ctorArgs});");
         }
         else
@@ -145,7 +145,7 @@ internal static class WrapperBuilder
             }
         }
 
-        foreach (var filter in model.Filters.AsArray())
+        foreach (var filter in model.Filters)
         {
             builder.NewLine();
             if (model.ServiceResolver != null)
@@ -196,7 +196,7 @@ internal static class WrapperBuilder
         builder.AppendLine($"private static {FilterDelegateType} Build{pascal}Pipeline()");
         builder.BeginBlock();
 
-        var filters = model.Filters.AsArray();
+        var filters = model.Filters;
         // Inner メソッドをパイプラインの末端 (terminal) として設定する
         // Set the inner method as the terminal of the pipeline
         builder.AppendLine($"{FilterDelegateType} p = __{handler.MethodName}_Inner__;");
@@ -204,7 +204,7 @@ internal static class WrapperBuilder
 
         // 末尾のフィルターから先頭に向かって順に delegate を包み込む (onion model)
         // Wrap delegates from the last filter toward the first (onion model)
-        for (var i = filters.Length - 1; i >= 0; i--)
+        for (var i = filters.Count - 1; i >= 0; i--)
         {
             var idx = filters[i].Index;
             builder.AppendLine($"var inner{i} = p;");
@@ -230,13 +230,13 @@ internal static class WrapperBuilder
         switch (handler.Kind)
         {
             case HandlerKind.Http:
-                BuildHttpHandlerMethod(builder, model, handler, model.Filters.AsArray().Length > 0);
+                BuildHttpHandlerMethod(builder, model, handler, model.Filters.Count > 0);
                 break;
             case HandlerKind.Timer:
-                BuildTimerHandlerMethod(builder, model, handler, model.Filters.AsArray().Length > 0);
+                BuildTimerHandlerMethod(builder, model, handler, model.Filters.Count > 0);
                 break;
             case HandlerKind.Queue:
-                BuildQueueHandlerMethod(builder, model, handler, model.Filters.AsArray().Length > 0);
+                BuildQueueHandlerMethod(builder, model, handler, model.Filters.Count > 0);
                 break;
         }
     }
@@ -406,10 +406,10 @@ internal static class WrapperBuilder
     // Emits binding code for all parameters of an HTTP handler in order.
     private static void BuildParameterBindings(SourceBuilder builder, HandlerModel handler, bool hasFilter)
     {
-        var parameters = handler.Parameters.AsArray();
-        for (var i = 0; i < parameters.Length; i++)
+        var parameters = handler.Parameters;
+        for (var i = 0; i < parameters.Count; i++)
         {
-            BuildParameterBinding(builder, handler, parameters[i], i, hasFilter);
+            BuildParameterBinding(builder, parameters[i], i, hasFilter);
         }
     }
 
@@ -417,8 +417,8 @@ internal static class WrapperBuilder
     // Emits DI resolution code only for FromServices parameters in a Timer handler.
     private static void BuildTimerParameterBindings(SourceBuilder builder, HandlerModel handler)
     {
-        var parameters = handler.Parameters.AsArray();
-        for (var i = 0; i < parameters.Length; i++)
+        var parameters = handler.Parameters;
+        for (var i = 0; i < parameters.Count; i++)
         {
             var p = parameters[i];
             if (p.BindingKind == ParameterBindingKind.FromServices)
@@ -433,8 +433,8 @@ internal static class WrapperBuilder
     // Emits DI resolution code only for FromServices parameters in a Queue handler.
     private static void BuildQueueParameterBindings(SourceBuilder builder, HandlerModel handler)
     {
-        var parameters = handler.Parameters.AsArray();
-        for (var i = 0; i < parameters.Length; i++)
+        var parameters = handler.Parameters;
+        for (var i = 0; i < parameters.Count; i++)
         {
             var p = parameters[i];
             if (p.BindingKind == ParameterBindingKind.FromServices)
@@ -453,7 +453,7 @@ internal static class WrapperBuilder
     // HttpRequest / FunctionContext / CancellationToken / Logger are passed directly at call site, so skipped here.
     // FromServices: DI resolution. FromBody: deserialize + validate.
     // FromQuery / FromRoute / FromHeader: string conversion then assignment.
-    private static void BuildParameterBinding(SourceBuilder builder, HandlerModel handler, ParameterModel param, int index, bool hasFilter)
+    private static void BuildParameterBinding(SourceBuilder builder, ParameterModel param, int index, bool hasFilter)
     {
         var pVar = $"p{index}";
         var typeName = param.Type.FullName;
@@ -819,10 +819,10 @@ internal static class WrapperBuilder
     // Builds the comma-separated argument expression string for each parameter based on its binding kind.
     private static string BuildCallArgs(HandlerModel handler, bool hasFilter, bool hasProvider)
     {
-        var parameters = handler.Parameters.AsArray();
+        var parameters = handler.Parameters;
         var argParts = new List<string>();
 
-        for (var i = 0; i < parameters.Length; i++)
+        for (var i = 0; i < parameters.Count; i++)
         {
             var p = parameters[i];
             switch (p.BindingKind)
