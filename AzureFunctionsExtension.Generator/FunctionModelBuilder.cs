@@ -1,6 +1,7 @@
 #pragma warning disable IDE0060, IDE0042, SA1313
 namespace AzureFunctionsExtension.Generator;
 
+using System.Globalization;
 using System.Text.RegularExpressions;
 
 using AzureFunctionsExtension.Generator.Models;
@@ -30,6 +31,7 @@ internal static class FunctionModelBuilder
     private const string HttpRequestFullName = "Microsoft.AspNetCore.Http.HttpRequest";
     private const string FunctionContextFullName = "Microsoft.Azure.Functions.Worker.FunctionContext";
     private const string CancellationTokenFullName = "System.Threading.CancellationToken";
+    private const string IActionResultFullName = "Microsoft.AspNetCore.Mvc.IActionResult";
 
     // [AzureFunctionAttribute] が付与されたクラスから FunctionModel を構築するエントリーポイント。
     // Entry point: builds a FunctionModel from the class decorated with [AzureFunctionAttribute].
@@ -155,6 +157,14 @@ internal static class FunctionModelBuilder
         return type.AllInterfaces.Any(i => i.ToDisplayString() == interfaceFullName);
     }
 
+    // 戻り値の型が IActionResult そのもの、または IActionResult を実装しているかを判定する。
+    // Determines whether the type is IActionResult itself or implements IActionResult.
+    private static bool IsActionResult(ITypeSymbol type)
+    {
+        return (type.ToDisplayString() == IActionResultFullName) ||
+               type.AllInterfaces.Any(static i => i.ToDisplayString() == IActionResultFullName);
+    }
+
     // メソッドのエンドポイント属性 (Http/Timer/Queue) を解析してハンドラーの種類と設定を決定する。
     // Analyzes endpoint attributes (Http/Timer/Queue) on a method to determine handler kind and configuration.
     private static HandlerModel? BuildHandlerModel(IMethodSymbol method, List<DiagnosticInfo> diagnostics)
@@ -261,6 +271,7 @@ internal static class FunctionModelBuilder
         var returnType = method.ReturnType;
         TypeRefModel? resultType;
         var isAsync = false;
+        var resultIsActionResult = false;
 
         if (returnType is INamedTypeSymbol namedReturn)
         {
@@ -270,6 +281,7 @@ internal static class FunctionModelBuilder
                 isAsync = true;
                 var inner = namedReturn.TypeArguments[0];
                 resultType = MakeTypeRef(inner);
+                resultIsActionResult = IsActionResult(inner);
             }
             else if ((namedReturn.ToDisplayString() == "System.Threading.Tasks.Task") ||
                      (namedReturn.ToDisplayString() == "System.Threading.Tasks.ValueTask"))
@@ -284,11 +296,13 @@ internal static class FunctionModelBuilder
             else
             {
                 resultType = MakeTypeRef(namedReturn);
+                resultIsActionResult = IsActionResult(namedReturn);
             }
         }
         else
         {
             resultType = MakeTypeRef(returnType);
+            resultIsActionResult = IsActionResult(returnType);
         }
 
         return new HandlerModel(
@@ -302,6 +316,7 @@ internal static class FunctionModelBuilder
             queueConnection,
             isAsync,
             resultType,
+            resultIsActionResult,
             new EquatableArray<ParameterModel>(parameters.ToArray()));
     }
 
@@ -555,7 +570,7 @@ internal static class FunctionModelBuilder
 
         if (value is string s)
         {
-            return $"\"{s}\"";
+            return SymbolDisplay.FormatLiteral(s, quote: true);
         }
 
         if (value is bool b)
@@ -565,10 +580,12 @@ internal static class FunctionModelBuilder
 
         if (value is char c)
         {
-            return $"'{c}'";
+            return SymbolDisplay.FormatLiteral(c, quote: true);
         }
 
-        return value.ToString() ?? "default";
+        // 数値などはカルチャ非依存のリテラルとして出力する (型キャストは呼び出し側で付与)
+        // Emit numeric and other literals using invariant culture (the cast is added by the caller).
+        return Convert.ToString(value, CultureInfo.InvariantCulture) ?? "default";
     }
 
     private static string GetConverterMethod(ITypeSymbol type)

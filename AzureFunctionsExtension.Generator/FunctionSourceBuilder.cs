@@ -18,6 +18,7 @@ internal static class FunctionSourceBuilder
     private const string BadRequestResultType = "global::Microsoft.AspNetCore.Mvc.BadRequestObjectResult";
     private const string ObjectResultType = "global::Microsoft.AspNetCore.Mvc.ObjectResult";
     private const string StatusCodeResultType = "global::Microsoft.AspNetCore.Mvc.StatusCodeResult";
+    private const string ResultsType = "global::AzureFunctionsExtension.Results";
     private const string InvocationContextType = "global::AzureFunctionsExtension.Filters.FunctionInvocationContext";
     private const string FilterDelegateType = "global::AzureFunctionsExtension.Filters.FunctionFilterDelegate";
     private const string BodySerializerType = "global::AzureFunctionsExtension.Serialization.IBodySerializer";
@@ -576,7 +577,8 @@ internal static class FunctionSourceBuilder
         {
             var baseType = param.Type.UnderlyingType.FullName;
             var converterMethod = param.ConverterMethod;
-            builder.AppendLine($"var {pVar} = ({typeName})null;");
+            var init = defaultLiteral != null ? $"({typeName}){defaultLiteral}" : $"({typeName})null";
+            builder.AppendLine($"var {pVar} = {init};");
             builder.AppendLine($"if ({dictExpr}.TryGetValue(\"{key}\", out var {pRaw}) &&");
             builder.AppendLine($"    {pRaw} != global::Microsoft.Extensions.Primitives.StringValues.Empty)");
             builder.BeginBlock();
@@ -660,11 +662,13 @@ internal static class FunctionSourceBuilder
         var typeName = param.Type.FullName;
         var key = param.Key;
         var converterMethod = param.ConverterMethod;
+        var defaultLiteral = param.HasDefault ? (param.DefaultValueLiteral ?? "default") : null;
 
         if (param.Type.IsNullable && (param.Type.UnderlyingType != null))
         {
             var baseType = param.Type.UnderlyingType.FullName;
-            builder.AppendLine($"var {pVar} = ({typeName})null;");
+            var init = defaultLiteral != null ? $"({typeName}){defaultLiteral}" : $"({typeName})null";
+            builder.AppendLine($"var {pVar} = {init};");
             builder.AppendLine($"if (req.RouteValues.TryGetValue(\"{key}\", out var {pRaw}obj) && {pRaw}obj is string {pRaw})");
             builder.BeginBlock();
             if (String.IsNullOrEmpty(converterMethod))
@@ -697,7 +701,6 @@ internal static class FunctionSourceBuilder
         }
         else
         {
-            var defaultLiteral = param.HasDefault ? (param.DefaultValueLiteral ?? "default") : null;
             var init = defaultLiteral != null ? $"({typeName}){defaultLiteral}" : $"default({typeName})";
             builder.AppendLine($"var {pVar} = {init};");
             builder.AppendLine($"if (req.RouteValues.TryGetValue(\"{key}\", out var {pRaw}obj) && {pRaw}obj is string {pRaw})");
@@ -740,11 +743,13 @@ internal static class FunctionSourceBuilder
         var typeName = param.Type.FullName;
         var key = param.Key;
         var converterMethod = param.ConverterMethod;
+        var defaultLiteral = param.HasDefault ? (param.DefaultValueLiteral ?? "default") : null;
 
         if (param.Type.IsNullable && (param.Type.UnderlyingType != null))
         {
             var baseType = param.Type.UnderlyingType.FullName;
-            builder.AppendLine($"var {pVar} = ({typeName})null;");
+            var init = defaultLiteral != null ? $"({typeName}){defaultLiteral}" : $"({typeName})null";
+            builder.AppendLine($"var {pVar} = {init};");
             builder.AppendLine($"if (req.Headers.TryGetValue(\"{key}\", out var {pRaw}sv) &&");
             builder.AppendLine($"    {pRaw}sv != global::Microsoft.Extensions.Primitives.StringValues.Empty)");
             builder.BeginBlock();
@@ -779,7 +784,6 @@ internal static class FunctionSourceBuilder
         }
         else
         {
-            var defaultLiteral = param.HasDefault ? (param.DefaultValueLiteral ?? "default") : null;
             var init = String.IsNullOrEmpty(converterMethod)
                 ? (defaultLiteral != null ? $"({typeName}){defaultLiteral}!" : $"default({typeName})!")
                 : (defaultLiteral != null ? $"({typeName}){defaultLiteral}" : $"default({typeName})");
@@ -818,9 +822,13 @@ internal static class FunctionSourceBuilder
     }
 
     // __target__ の実メソッドを呼び出すコードを出力する。
-    // 戻り値がある場合は __result__ に格納し、フィルターモードなら ctx.Result に、直接モードなら return に使う。
+    // HTTP の戻り値は IActionResult ならそのまま、void / Task は Results.Ok()、それ以外は Results.Ok(value) でラップする。
+    // Results.Ok を経由することでライブラリ独自の JsonOptions が適用される。
+    // 結果はフィルターモードなら ctx.Result に、直接モードなら return に使う。
     // Emits code to invoke the actual method on __target__.
-    // If a result exists, stores it in __result__; in filter mode sets ctx.Result, otherwise returns it.
+    // For HTTP, an IActionResult is returned as-is; void/Task is wrapped as Results.Ok() and any other
+    // return value as Results.Ok(value), so the library's JsonOptions is honored.
+    // The result is assigned to ctx.Result in filter mode, otherwise returned.
     private static void BuildHandlerInvocation(SourceBuilder builder, HandlerModel handler, bool hasFilter)
     {
         var args = BuildCallArgs(handler, hasFilter);
@@ -844,14 +852,33 @@ internal static class FunctionSourceBuilder
             return;
         }
 
+        // 戻り値なし (void / Task / ValueTask) は実行後に 200 OK を返す
+        // No return value (void / Task / ValueTask): invoke then return 200 OK
+        if (handler.ResultType == null)
+        {
+            builder.AppendLine($"{awaitPrefix}target.{handler.MethodName}({args});");
+            EmitHttpResult(builder, $"{ResultsType}.Ok()", hasFilter);
+            return;
+        }
+
+        // IActionResult はそのまま、それ以外の戻り値は Results.Ok でラップする
+        // Return IActionResult as-is; wrap any other return value with Results.Ok
         builder.AppendLine($"var __result__ = {awaitPrefix}target.{handler.MethodName}({args});");
+        var resultExpr = handler.ResultIsActionResult ? "__result__" : $"{ResultsType}.Ok(__result__)";
+        EmitHttpResult(builder, resultExpr, hasFilter);
+    }
+
+    // HTTP ハンドラーの結果を、フィルターモードなら ctx.Result へ、直接モードなら return で返す。
+    // Emits the HTTP handler result: assigns to ctx.Result in filter mode, otherwise returns it.
+    private static void EmitHttpResult(SourceBuilder builder, string resultExpr, bool hasFilter)
+    {
         if (hasFilter)
         {
-            builder.AppendLine("ctx.Result = __result__;");
+            builder.AppendLine($"ctx.Result = {resultExpr};");
         }
         else
         {
-            builder.AppendLine("return __result__;");
+            builder.AppendLine($"return {resultExpr};");
         }
     }
 

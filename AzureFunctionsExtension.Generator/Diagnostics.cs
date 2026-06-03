@@ -12,14 +12,6 @@ internal static class Diagnostics
         defaultSeverity: DiagnosticSeverity.Error,
         isEnabledByDefault: true);
 
-    public static DiagnosticDescriptor NoHandlerAttribute { get; } = new(
-        id: "AFE0002",
-        title: "Public method has no handler attribute",
-        messageFormat: "Public method '{0}' has no handler attribute",
-        category: "Usage",
-        defaultSeverity: DiagnosticSeverity.Warning,
-        isEnabledByDefault: true);
-
     public static DiagnosticDescriptor MultipleHandlerAttributes { get; } = new(
         id: "AFE0003",
         title: "Handler has multiple handler attributes",

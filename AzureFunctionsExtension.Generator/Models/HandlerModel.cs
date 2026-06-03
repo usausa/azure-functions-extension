@@ -13,6 +13,7 @@ internal sealed record HandlerModel(
     string? QueueConnection,
     bool IsAsync,
     TypeRefModel? ResultType,
+    bool ResultIsActionResult,
     EquatableArray<ParameterModel> Parameters);
 
 internal enum HandlerKind
