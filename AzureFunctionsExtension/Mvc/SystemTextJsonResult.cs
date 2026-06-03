@@ -19,8 +19,8 @@ public class SystemTextJsonResult : ActionResult
 
     public object? Value { get; set; }
 
-    [UnconditionalSuppressMessage("ReflectionAnalysis", "IL2026", Justification = "Result serialization preserves the existing API shape.")]
-    [UnconditionalSuppressMessage("ReflectionAnalysis", "IL3050", Justification = "Result serialization preserves the existing API shape.")]
+    [UnconditionalSuppressMessage("Trimming", "IL2026", Justification = "Result serialization preserves the existing API shape.")]
+    [UnconditionalSuppressMessage("AOT", "IL3050", Justification = "Result serialization preserves the existing API shape.")]
     public override async Task ExecuteResultAsync(ActionContext context)
     {
         var response = context.HttpContext.Response;

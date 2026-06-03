@@ -35,8 +35,8 @@ public sealed class JsonBodySerializer : IBodySerializer
         this.context = context;
     }
 
-    [UnconditionalSuppressMessage("ReflectionAnalysis", "IL2026", Justification = "Reflection path is used only when constructed with JsonSerializerOptions.")]
-    [UnconditionalSuppressMessage("ReflectionAnalysis", "IL3050", Justification = "Reflection path is used only when constructed with JsonSerializerOptions.")]
+    [UnconditionalSuppressMessage("Trimming", "IL2026", Justification = "Reflection path is used only when constructed with JsonSerializerOptions.")]
+    [UnconditionalSuppressMessage("AOT", "IL3050", Justification = "Reflection path is used only when constructed with JsonSerializerOptions.")]
     public T? Deserialize<T>(Stream body)
     {
         if (context is not null)
@@ -47,8 +47,8 @@ public sealed class JsonBodySerializer : IBodySerializer
         return JsonSerializer.Deserialize<T>(body, options);
     }
 
-    [UnconditionalSuppressMessage("ReflectionAnalysis", "IL2026", Justification = "Reflection path is used only when constructed with JsonSerializerOptions.")]
-    [UnconditionalSuppressMessage("ReflectionAnalysis", "IL3050", Justification = "Reflection path is used only when constructed with JsonSerializerOptions.")]
+    [UnconditionalSuppressMessage("Trimming", "IL2026", Justification = "Reflection path is used only when constructed with JsonSerializerOptions.")]
+    [UnconditionalSuppressMessage("AOT", "IL3050", Justification = "Reflection path is used only when constructed with JsonSerializerOptions.")]
     public async Task SerializeAsync<T>(Stream output, T value, CancellationToken ct)
     {
         if (context is not null)

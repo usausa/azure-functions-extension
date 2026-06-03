@@ -11,15 +11,15 @@ using Microsoft.Extensions.DependencyInjection.Extensions;
 
 public static class ServiceCollectionExtensions
 {
-    [UnconditionalSuppressMessage("ReflectionAnalysis", "IL2026", Justification = "Default serializer registration keeps the existing API shape.")]
-    [UnconditionalSuppressMessage("ReflectionAnalysis", "IL3050", Justification = "Default serializer registration keeps the existing API shape.")]
+    [UnconditionalSuppressMessage("Trimming", "IL2026", Justification = "Default serializer registration keeps the existing API shape.")]
+    [UnconditionalSuppressMessage("AOTs", "IL3050", Justification = "Default serializer registration keeps the existing API shape.")]
     public static IServiceCollection AddAzureFunctionExtension(this IServiceCollection services)
     {
         return services.AddAzureFunctionExtension(static _ => { });
     }
 
-    [UnconditionalSuppressMessage("ReflectionAnalysis", "IL2026", Justification = "Default serializer registration keeps the existing API shape.")]
-    [UnconditionalSuppressMessage("ReflectionAnalysis", "IL3050", Justification = "Default serializer registration keeps the existing API shape.")]
+    [UnconditionalSuppressMessage("Trimming", "IL2026", Justification = "Default serializer registration keeps the existing API shape.")]
+    [UnconditionalSuppressMessage("AOT", "IL3050", Justification = "Default serializer registration keeps the existing API shape.")]
     public static IServiceCollection AddAzureFunctionExtension(this IServiceCollection services, Action<JsonOptions> action)
     {
         services.Configure(action);
