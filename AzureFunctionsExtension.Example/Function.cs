@@ -50,7 +50,7 @@ internal sealed partial class Function
         [FromQuery] int c = 3)
     {
         QueryRequest(log, a, b, c, null);
-        return Results.Of(new QueryResponse { Result = a + (b ?? 0) + c });
+        return Results.Ok(new QueryResponse { Result = a + (b ?? 0) + c });
     }
 
     // [FromQuery] — arrays
@@ -60,29 +60,33 @@ internal sealed partial class Function
         [FromQuery] int?[] b)
     {
         QueryArrayRequest(log, a.Length, b.Length, null);
-        return Results.Of(new QueryResponse { Result = a.Sum() + b.Sum(static x => x ?? 0) });
+        return Results.Ok(new QueryResponse { Result = a.Sum() + b.Sum(static x => x ?? 0) });
     }
 
     // [FromBody] — with DataAnnotations validation
-    [HttpEndpoint("post", "body", AuthorizationLevel.Function)]
+    [HttpEndpoint("post", "body")]
     public IActionResult Body([FromBody] BodyRequest request)
     {
         BodyRequestLog(log, request.Id, request.Name, request.Flag, request.DateTime, null);
-        return Results.Of(new BodyResponse
+        return Results.Ok(new BodyResponse
         {
             Id = request.Id,
             Name = request.Name,
             Flag = request.Flag,
-            DateTime = DateTime.Now,
+            DateTime = DateTime.Now
         });
     }
 
-    // [FromRoute] — path parameter binding
+    // [FromRoute] — path parameter binding; demonstrates Results.NotFound() / Results.Ok()
     [HttpEndpoint("get", "items/{id}", AuthorizationLevel.Anonymous)]
     public IActionResult GetItem([FromRoute] int id)
     {
         RouteRequest(log, id, null);
-        return Results.Of(new ItemResponse { Id = id, Name = $"Item-{id}" });
+        if (id <= 0)
+        {
+            return Results.NotFound($"Item {id} not found.");
+        }
+        return Results.Ok(new ItemResponse { Id = id, Name = $"Item-{id}" });
     }
 
     // [FromHeader] — custom HTTP header binding
@@ -90,7 +94,7 @@ internal sealed partial class Function
     public IActionResult HeaderEcho([FromHeader("X-Correlation-Id")] string? correlationId)
     {
         HeaderRequest(log, correlationId, null);
-        return Results.Of(new { CorrelationId = correlationId ?? "(none)" });
+        return Results.Ok(new { CorrelationId = correlationId ?? "(none)" });
     }
 
     // ApiException — returns 404 when item is not found
@@ -102,7 +106,7 @@ internal sealed partial class Function
         {
             throw new ApiException(404, $"Item '{name}' not found.");
         }
-        return Results.Of(new ItemResponse { Id = 0, Name = name });
+        return Results.Ok(new ItemResponse { Id = 0, Name = name });
     }
 
     // async Task<IActionResult> + [FromServices] + [FromBody(SkipValidate = true)]
@@ -113,7 +117,7 @@ internal sealed partial class Function
     {
         GreetLog(log, request.Name, null);
         await Task.Yield();
-        return Results.Of(new GreetResponse { Message = greeting.Greet(request.Name) });
+        return Results.Ok(new GreetResponse { Message = greeting.Greet(request.Name) });
     }
 
     // [TimerEndpoint] + [FromTrigger]

@@ -26,10 +26,13 @@ internal static class WrapperBuilder
     private const string DefaultRequestValidatorType = "global::AzureFunctionsExtension.Validation.DataAnnotationsRequestValidator";
     private const string ApiExceptionType = "global::AzureFunctionsExtension.ApiException";
     private const string JsonExceptionType = "global::System.Text.Json.JsonException";
-    private const string StringConverterType = "global::StringConvertHelper.StringConvert";
+    private const string StringConverterType = "global::AzureFunctionsExtension.Binders.StringConverter";
     private const string GetRequiredService = "global::Microsoft.Extensions.DependencyInjection.ServiceProviderServiceExtensions.GetRequiredService";
     private const string GetService = "global::Microsoft.Extensions.DependencyInjection.ServiceProviderServiceExtensions.GetService";
     private const string ActivatorUtilitiesType = "global::Microsoft.Extensions.DependencyInjection.ActivatorUtilities";
+    private const string GetLoggerMethod = "global::Microsoft.Azure.Functions.Worker.FunctionContextLoggerExtensions.GetLogger";
+    private const string LogErrorMethod = "global::Microsoft.Extensions.Logging.LoggerExtensions.LogError";
+    private const string AsSpanMethod = "global::System.MemoryExtensions.AsSpan";
 
     // クラス全体で共有する静的フィールド (target/provider/serializer/filter など) を含む
     // __shared__ ファイルを生成する。
@@ -223,8 +226,9 @@ internal static class WrapperBuilder
             builder.BeginBlock();
             builder.AppendLine($"return new {ObjectResultType}(ex.Message) {{ StatusCode = ex.StatusCode }};");
             builder.EndBlock();
-            builder.AppendLine("catch (global::System.Exception)");
+            builder.AppendLine("catch (global::System.Exception ex)");
             builder.BeginBlock();
+            builder.AppendLine($"{LogErrorMethod}({GetLoggerMethod}(context, context.FunctionDefinition.Name), ex, ex.Message);");
             builder.AppendLine($"return new {StatusCodeResultType}(500);");
             builder.EndBlock();
             builder.NewLine();
@@ -241,8 +245,9 @@ internal static class WrapperBuilder
             builder.BeginBlock();
             builder.AppendLine($"return new {ObjectResultType}(ex.Message) {{ StatusCode = ex.StatusCode }};");
             builder.EndBlock();
-            builder.AppendLine("catch (global::System.Exception)");
+            builder.AppendLine("catch (global::System.Exception ex)");
             builder.BeginBlock();
+            builder.AppendLine($"{LogErrorMethod}({GetLoggerMethod}(context, context.FunctionDefinition.Name), ex, ex.Message);");
             builder.AppendLine($"return new {StatusCodeResultType}(500);");
             builder.EndBlock();
         }
@@ -282,8 +287,9 @@ internal static class WrapperBuilder
             builder.BeginBlock();
             builder.AppendLine("await pipeline(ctx);");
             builder.EndBlock();
-            builder.AppendLine("catch (global::System.Exception)");
+            builder.AppendLine("catch (global::System.Exception ex)");
             builder.BeginBlock();
+            builder.AppendLine($"{LogErrorMethod}({GetLoggerMethod}(context, context.FunctionDefinition.Name), ex, ex.Message);");
             builder.AppendLine("throw;");
             builder.EndBlock();
         }
@@ -294,8 +300,9 @@ internal static class WrapperBuilder
             BuildTimerParameterBindings(builder, handler);
             BuildHandlerInvocation(builder, handler, hasFilter: false);
             builder.EndBlock();
-            builder.AppendLine("catch (global::System.Exception)");
+            builder.AppendLine("catch (global::System.Exception ex)");
             builder.BeginBlock();
+            builder.AppendLine($"{LogErrorMethod}({GetLoggerMethod}(context, context.FunctionDefinition.Name), ex, ex.Message);");
             builder.AppendLine("throw;");
             builder.EndBlock();
         }
@@ -336,8 +343,9 @@ internal static class WrapperBuilder
             builder.BeginBlock();
             builder.AppendLine("await pipeline(ctx);");
             builder.EndBlock();
-            builder.AppendLine("catch (global::System.Exception)");
+            builder.AppendLine("catch (global::System.Exception ex)");
             builder.BeginBlock();
+            builder.AppendLine($"{LogErrorMethod}({GetLoggerMethod}(context, context.FunctionDefinition.Name), ex, ex.Message);");
             builder.AppendLine("throw;");
             builder.EndBlock();
         }
@@ -348,8 +356,9 @@ internal static class WrapperBuilder
             BuildQueueParameterBindings(builder, handler);
             BuildHandlerInvocation(builder, handler, hasFilter: false);
             builder.EndBlock();
-            builder.AppendLine("catch (global::System.Exception)");
+            builder.AppendLine("catch (global::System.Exception ex)");
             builder.BeginBlock();
+            builder.AppendLine($"{LogErrorMethod}({GetLoggerMethod}(context, context.FunctionDefinition.Name), ex, ex.Message);");
             builder.AppendLine("throw;");
             builder.EndBlock();
         }
@@ -518,9 +527,33 @@ internal static class WrapperBuilder
             {
                 builder.AppendLine($"{pVar}[i] = {pVar}parts[i];");
             }
+            else if (param.Type.ElementType.IsNullable && (param.Type.ElementType.UnderlyingType != null))
+            {
+                var baseElemType = param.Type.ElementType.UnderlyingType.FullName;
+                var isEnum = converterMethod == "TryToEnum";
+                var converterCall = isEnum
+                    ? $"!{StringConverterType}.TryToEnum<{baseElemType}>({AsSpanMethod}({pVar}parts[i]), out var {pVar}elem)"
+                    : $"!{StringConverterType}.{converterMethod}({AsSpanMethod}({pVar}parts[i]), out var {pVar}elem)";
+                builder.AppendLine($"if ({converterCall})");
+                builder.BeginBlock();
+                if (hasFilter)
+                {
+                    builder.AppendLine($"ctx.Result = new {BadRequestResultType}($\"Invalid parameter: {key}\");");
+                    builder.AppendLine("return;");
+                }
+                else
+                {
+                    builder.AppendLine($"return new {BadRequestResultType}($\"Invalid parameter: {key}\");");
+                }
+                builder.EndBlock();
+                builder.AppendLine($"{pVar}[i] = {pVar}elem;");
+            }
             else
             {
-                var converterCall = $"!{StringConverterType}.TryConvert<{elemType}>({pVar}parts[i], out {pVar}[i])";
+                var isEnum = converterMethod == "TryToEnum";
+                var converterCall = isEnum
+                    ? $"!{StringConverterType}.TryToEnum<{elemType}>({AsSpanMethod}({pVar}parts[i]), out {pVar}[i])"
+                    : $"!{StringConverterType}.{converterMethod}({AsSpanMethod}({pVar}parts[i]), out {pVar}[i])";
                 builder.AppendLine($"if ({converterCall})");
                 builder.BeginBlock();
                 if (hasFilter)
@@ -553,7 +586,10 @@ internal static class WrapperBuilder
             }
             else
             {
-                var converterCall = $"!{StringConverterType}.TryConvert<{baseType}>({pRaw}.ToString(), out var {pVar}tmp)";
+                var isEnum = converterMethod == "TryToEnum";
+                var converterCall = isEnum
+                    ? $"!{StringConverterType}.TryToEnum<{baseType}>({AsSpanMethod}({pRaw}.ToString()), out var {pVar}tmp)"
+                    : $"!{StringConverterType}.{converterMethod}({AsSpanMethod}({pRaw}.ToString()), out var {pVar}tmp)";
                 builder.AppendLine($"if ({converterCall})");
                 builder.BeginBlock();
                 if (hasFilter)
@@ -593,7 +629,10 @@ internal static class WrapperBuilder
                 builder.AppendLine($"if ({dictExpr}.TryGetValue(\"{key}\", out var {pRaw}) &&");
                 builder.AppendLine($"    {pRaw} != global::Microsoft.Extensions.Primitives.StringValues.Empty)");
                 builder.BeginBlock();
-                var converterCall = $"!{StringConverterType}.TryConvert<{typeName}>({pRaw}.ToString(), out {pVar})";
+                var isEnum = converterMethod == "TryToEnum";
+                var converterCall = isEnum
+                    ? $"!{StringConverterType}.TryToEnum<{typeName}>({AsSpanMethod}({pRaw}.ToString()), out {pVar})"
+                    : $"!{StringConverterType}.{converterMethod}({AsSpanMethod}({pRaw}.ToString()), out {pVar})";
                 builder.AppendLine($"if ({converterCall})");
                 builder.BeginBlock();
                 if (hasFilter)
@@ -634,7 +673,10 @@ internal static class WrapperBuilder
             }
             else
             {
-                var converterCall = $"!{StringConverterType}.TryConvert<{baseType}>({pRaw}, out var {pVar}tmp)";
+                var isEnum = converterMethod == "TryToEnum";
+                var converterCall = isEnum
+                    ? $"!{StringConverterType}.TryToEnum<{baseType}>({AsSpanMethod}({pRaw}), out var {pVar}tmp)"
+                    : $"!{StringConverterType}.{converterMethod}({AsSpanMethod}({pRaw}), out var {pVar}tmp)";
                 builder.AppendLine($"if ({converterCall})");
                 builder.BeginBlock();
                 if (hasFilter)
@@ -666,7 +708,10 @@ internal static class WrapperBuilder
             }
             else
             {
-                var converterCall = $"!{StringConverterType}.TryConvert<{typeName}>({pRaw}, out {pVar})";
+                var isEnum = converterMethod == "TryToEnum";
+                var converterCall = isEnum
+                    ? $"!{StringConverterType}.TryToEnum<{typeName}>({AsSpanMethod}({pRaw}), out {pVar})"
+                    : $"!{StringConverterType}.{converterMethod}({AsSpanMethod}({pRaw}), out {pVar})";
                 builder.AppendLine($"if ({converterCall})");
                 builder.BeginBlock();
                 if (hasFilter)
@@ -710,7 +755,10 @@ internal static class WrapperBuilder
             }
             else
             {
-                var converterCall = $"!{StringConverterType}.TryConvert<{baseType}>({pRaw}, out var {pVar}tmp)";
+                var isEnum = converterMethod == "TryToEnum";
+                var converterCall = isEnum
+                    ? $"!{StringConverterType}.TryToEnum<{baseType}>({AsSpanMethod}({pRaw}), out var {pVar}tmp)"
+                    : $"!{StringConverterType}.{converterMethod}({AsSpanMethod}({pRaw}), out var {pVar}tmp)";
                 builder.AppendLine($"if ({converterCall})");
                 builder.BeginBlock();
                 if (hasFilter)
@@ -746,7 +794,10 @@ internal static class WrapperBuilder
             }
             else
             {
-                var converterCall = $"!{StringConverterType}.TryConvert<{typeName}>({pRaw}, out {pVar})";
+                var isEnum = converterMethod == "TryToEnum";
+                var converterCall = isEnum
+                    ? $"!{StringConverterType}.TryToEnum<{typeName}>({AsSpanMethod}({pRaw}), out {pVar})"
+                    : $"!{StringConverterType}.{converterMethod}({AsSpanMethod}({pRaw}), out {pVar})";
                 builder.AppendLine($"if ({converterCall})");
                 builder.BeginBlock();
                 if (hasFilter)

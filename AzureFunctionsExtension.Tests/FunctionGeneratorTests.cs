@@ -177,6 +177,157 @@ public sealed class FunctionGeneratorTests
         Assert.Contains("Request body is required.", result.GeneratedCode, StringComparison.Ordinal);
     }
 
+    [Fact]
+    public void GeneratesStringConverterCallForIntQueryParameter()
+    {
+        const string source = """
+            namespace TestFunctions;
+
+            using AzureFunctionsExtension.Annotations;
+            using Microsoft.AspNetCore.Mvc;
+
+            [AzureFunction]
+            public sealed partial class SampleFunction
+            {
+                [HttpEndpoint("get", "sample")]
+                public IActionResult Run([AzureFunctionsExtension.Annotations.FromQuery] int id)
+                {
+                    return new EmptyResult();
+                }
+            }
+            """;
+
+        var result = RunGenerator(source);
+
+        AssertNoGeneratorErrors(result);
+        Assert.Contains("AzureFunctionsExtension.Binders.StringConverter", result.GeneratedCode, StringComparison.Ordinal);
+        Assert.Contains("TryToInt32", result.GeneratedCode, StringComparison.Ordinal);
+        Assert.Contains("MemoryExtensions.AsSpan", result.GeneratedCode, StringComparison.Ordinal);
+        Assert.DoesNotContain("TryConvert", result.GeneratedCode, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void GeneratesStringConverterCallForGuidRouteParameter()
+    {
+        const string source = """
+            namespace TestFunctions;
+
+            using System;
+            using AzureFunctionsExtension.Annotations;
+            using Microsoft.AspNetCore.Mvc;
+
+            [AzureFunction]
+            public sealed partial class SampleFunction
+            {
+                [HttpEndpoint("get", "items/{id}")]
+                public IActionResult Run([AzureFunctionsExtension.Annotations.FromRoute] Guid id)
+                {
+                    return new EmptyResult();
+                }
+            }
+            """;
+
+        var result = RunGenerator(source);
+
+        AssertNoGeneratorErrors(result);
+        Assert.Contains("TryToGuid", result.GeneratedCode, StringComparison.Ordinal);
+        Assert.Contains("MemoryExtensions.AsSpan", result.GeneratedCode, StringComparison.Ordinal);
+        Assert.DoesNotContain("TryConvert", result.GeneratedCode, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void GeneratesExceptionLoggingInHttpHandler()
+    {
+        const string source = """
+            namespace TestFunctions;
+
+            using AzureFunctionsExtension.Annotations;
+            using Microsoft.AspNetCore.Mvc;
+
+            [AzureFunction]
+            public sealed partial class SampleFunction
+            {
+                [HttpEndpoint("get", "sample")]
+                public IActionResult Run()
+                {
+                    return new EmptyResult();
+                }
+            }
+            """;
+
+        var result = RunGenerator(source);
+
+        AssertNoGeneratorErrors(result);
+        Assert.Contains("catch (global::System.Exception ex)", result.GeneratedCode, StringComparison.Ordinal);
+        Assert.Contains("FunctionContextLoggerExtensions.GetLogger", result.GeneratedCode, StringComparison.Ordinal);
+        Assert.Contains("LoggerExtensions.LogError", result.GeneratedCode, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void GeneratesTimerHandlerWithExceptionLogging()
+    {
+        const string source = """
+            namespace TestFunctions;
+
+            using AzureFunctionsExtension.Annotations;
+
+            [AzureFunction]
+            public sealed partial class SampleFunction
+            {
+                [TimerEndpoint("0 */5 * * * *")]
+                public void Run()
+                {
+                }
+            }
+            """;
+
+        var result = RunGenerator(source);
+
+        // Generated code references TimerInfo/TimerTrigger from the extension package
+        // which is not in test compilation references — check code content only.
+        Assert.Contains("TimerTrigger", result.GeneratedCode, StringComparison.Ordinal);
+        Assert.Contains("catch (global::System.Exception ex)", result.GeneratedCode, StringComparison.Ordinal);
+        Assert.Contains("FunctionContextLoggerExtensions.GetLogger", result.GeneratedCode, StringComparison.Ordinal);
+        Assert.Contains("throw;", result.GeneratedCode, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void GeneratesHttpHandlerWithFilterPipeline()
+    {
+        const string source = """
+            namespace TestFunctions;
+
+            using AzureFunctionsExtension.Annotations;
+            using AzureFunctionsExtension.Filters;
+            using Microsoft.AspNetCore.Mvc;
+            using System.Threading.Tasks;
+
+            public class TestFilter : IFunctionFilter
+            {
+                public ValueTask InvokeAsync(FunctionInvocationContext ctx, FunctionFilterDelegate next)
+                    => next(ctx);
+            }
+
+            [AzureFunction]
+            [Filter<TestFilter>]
+            public sealed partial class SampleFunction
+            {
+                [HttpEndpoint("get", "sample")]
+                public IActionResult Run()
+                {
+                    return new EmptyResult();
+                }
+            }
+            """;
+
+        var result = RunGenerator(source);
+
+        AssertNoGeneratorErrors(result);
+        Assert.Contains("FunctionInvocationContext", result.GeneratedCode, StringComparison.Ordinal);
+        Assert.Contains("BuildRunPipeline", result.GeneratedCode, StringComparison.Ordinal);
+        Assert.Contains("ctx.Result", result.GeneratedCode, StringComparison.Ordinal);
+    }
+
     private static void AssertNoGeneratorErrors(GeneratorTestResult result)
     {
         var errors = result.Diagnostics

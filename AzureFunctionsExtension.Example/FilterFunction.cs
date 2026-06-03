@@ -27,6 +27,6 @@ internal sealed partial class FilterFunction
     public IActionResult Ping()
     {
         PingLog(log, null);
-        return Results.Of(new { Message = "pong" });
+        return Results.Ok(new { Message = "pong" });
     }
 }

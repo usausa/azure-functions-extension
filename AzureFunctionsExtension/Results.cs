@@ -6,13 +6,29 @@ using Microsoft.AspNetCore.Mvc;
 
 public static class Results
 {
-    public static IActionResult Of<T>(T value)
-    {
-        if (value is null)
-        {
-            return new NotFoundResult();
-        }
+    public static IActionResult Ok() => new OkResult();
 
-        return new SystemTextJsonResult(value);
-    }
+    public static IActionResult Ok(object body) => new SystemTextJsonResult(body);
+
+    public static IActionResult Created(string uri, object? body = null) =>
+        new CreatedResult(uri, body);
+
+    public static IActionResult NoContent() => new NoContentResult();
+
+    public static IActionResult BadRequest() => new BadRequestResult();
+
+    public static IActionResult BadRequest(object body) => new BadRequestObjectResult(body);
+
+    public static IActionResult NotFound() => new NotFoundResult();
+
+    public static IActionResult NotFound(object body) => new NotFoundObjectResult(body);
+
+    public static IActionResult Conflict() => new ConflictResult();
+
+    public static IActionResult Conflict(object body) => new ConflictObjectResult(body);
+
+    public static IActionResult StatusCode(int statusCode) => new StatusCodeResult(statusCode);
+
+    public static IActionResult StatusCode(int statusCode, object body) =>
+        new ObjectResult(body) { StatusCode = statusCode };
 }
