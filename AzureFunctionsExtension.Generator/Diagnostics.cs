@@ -52,22 +52,6 @@ internal static class Diagnostics
         defaultSeverity: DiagnosticSeverity.Error,
         isEnabledByDefault: true);
 
-    public static DiagnosticDescriptor MissingServiceResolver { get; } = new(
-        id: "AFE0007",
-        title: "[AzureFunction] class has constructor parameters but no [ServiceResolver]",
-        messageFormat: "[AzureFunction] class '{0}' has constructor parameters but no [ServiceResolver]",
-        category: "Usage",
-        defaultSeverity: DiagnosticSeverity.Error,
-        isEnabledByDefault: true);
-
-    public static DiagnosticDescriptor InvalidServiceResolverType { get; } = new(
-        id: "AFE0008",
-        title: "ServiceResolver type does not have ConfigureServices method",
-        messageFormat: "ServiceResolver type '{0}' does not have a public static IServiceCollection ConfigureServices() method",
-        category: "Usage",
-        defaultSeverity: DiagnosticSeverity.Error,
-        isEnabledByDefault: true);
-
     public static DiagnosticDescriptor FilterNotImplementIFunctionFilter { get; } = new(
         id: "AFE0009",
         title: "Filter type does not implement IFunctionFilter",
