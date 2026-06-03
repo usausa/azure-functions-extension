@@ -22,7 +22,7 @@ public sealed class FunctionGenerator : IIncrementalGenerator
             .ForAttributeWithMetadataName(
                 AzureFunctionAttributeFullName,
                 static (syntax, _) => syntax is ClassDeclarationSyntax,
-                static (ctx, _) => ModelBuilder.BuildFunctionModel(ctx))
+                static (ctx, _) => FunctionModelBuilder.BuildFunctionModel(ctx))
             .Collect();
 
         context.RegisterImplementationSourceOutput(provider, static (ctx, results) => Execute(ctx, results));
@@ -42,7 +42,7 @@ public sealed class FunctionGenerator : IIncrementalGenerator
             context.CancellationToken.ThrowIfCancellationRequested();
 
             builder.Clear();
-            WrapperBuilder.BuildShared(builder, model);
+            FunctionSourceBuilder.BuildShared(builder, model);
             context.AddSource(
                 MakeFilename(model.Namespace, model.ClassName, "__shared__"),
                 SourceText.From(builder.ToString(), Encoding.UTF8));
@@ -50,7 +50,7 @@ public sealed class FunctionGenerator : IIncrementalGenerator
             foreach (var handler in model.Handlers)
             {
                 builder.Clear();
-                WrapperBuilder.Build(builder, model, handler);
+                FunctionSourceBuilder.Build(builder, model, handler);
 
                 var filename = MakeFilename(model.Namespace, model.ClassName, handler.MethodName);
                 context.AddSource(filename, SourceText.From(builder.ToString(), Encoding.UTF8));

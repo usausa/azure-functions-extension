@@ -5,7 +5,7 @@ using AzureFunctionsExtension.Generator.Models;
 
 using SourceGenerateHelper;
 
-internal static class WrapperBuilder
+internal static class FunctionSourceBuilder
 {
     private const string FunctionAttributeType = "global::Microsoft.Azure.Functions.Worker.Function";
     private const string HttpTriggerType = "global::Microsoft.Azure.Functions.Worker.HttpTrigger";

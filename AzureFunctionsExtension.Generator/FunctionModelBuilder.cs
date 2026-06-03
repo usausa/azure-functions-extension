@@ -11,7 +11,7 @@ using Microsoft.CodeAnalysis.CSharp.Syntax;
 
 using SourceGenerateHelper;
 
-internal static class ModelBuilder
+internal static class FunctionModelBuilder
 {
     private const string FilterAttributeName = "AzureFunctionsExtension.Annotations.FilterAttribute`1";
     private const string HttpEndpointAttributeName = "AzureFunctionsExtension.Annotations.HttpEndpointAttribute";

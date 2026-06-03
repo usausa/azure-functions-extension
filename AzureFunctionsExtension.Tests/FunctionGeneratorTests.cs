@@ -292,6 +292,34 @@ public sealed class FunctionGeneratorTests
     }
 
     [Fact]
+    public void GeneratesQueueHandlerWithExceptionLogging()
+    {
+        const string source = """
+            namespace TestFunctions;
+
+            using AzureFunctionsExtension.Annotations;
+
+            [AzureFunction]
+            public sealed partial class SampleFunction
+            {
+                [QueueEndpoint("myqueue")]
+                public void Handle([FromTrigger] string message)
+                {
+                }
+            }
+            """;
+
+        var result = RunGenerator(source);
+
+        // Generated code references QueueTrigger from the extension package
+        // which is not in test compilation references — check code content only.
+        Assert.Contains("QueueTrigger", result.GeneratedCode, StringComparison.Ordinal);
+        Assert.Contains("catch (global::System.Exception ex)", result.GeneratedCode, StringComparison.Ordinal);
+        Assert.Contains("FunctionContextLoggerExtensions.GetLogger", result.GeneratedCode, StringComparison.Ordinal);
+        Assert.Contains("throw;", result.GeneratedCode, StringComparison.Ordinal);
+    }
+
+    [Fact]
     public void GeneratesHttpHandlerWithFilterPipeline()
     {
         const string source = """
