@@ -10,7 +10,6 @@ using IActionResult = Microsoft.AspNetCore.Mvc.IActionResult;
 
 // Demonstrates [Filter<T>] filter pipeline applied to all handlers in the class.
 [AzureFunction]
-[ServiceResolver(typeof(ServiceResolver))]
 [Filter<LoggingFilter>(Order = 0)]
 internal sealed partial class FilterFunction
 {

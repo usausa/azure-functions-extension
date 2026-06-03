@@ -21,12 +21,15 @@ internal static class WrapperBuilder
     private const string InvocationContextType = "global::AzureFunctionsExtension.Filters.FunctionInvocationContext";
     private const string FilterDelegateType = "global::AzureFunctionsExtension.Filters.FunctionFilterDelegate";
     private const string BodySerializerType = "global::AzureFunctionsExtension.Serialization.IBodySerializer";
+    private const string DefaultBodySerializerType = "global::AzureFunctionsExtension.Serialization.JsonBodySerializer";
     private const string RequestValidatorType = "global::AzureFunctionsExtension.Validation.IRequestValidator";
+    private const string DefaultRequestValidatorType = "global::AzureFunctionsExtension.Validation.DataAnnotationsRequestValidator";
     private const string ApiExceptionType = "global::AzureFunctionsExtension.ApiException";
+    private const string JsonExceptionType = "global::System.Text.Json.JsonException";
     private const string StringConverterType = "global::StringConvertHelper.StringConvert";
     private const string GetRequiredService = "global::Microsoft.Extensions.DependencyInjection.ServiceProviderServiceExtensions.GetRequiredService";
-    private const string BuildServiceProvider = "global::Microsoft.Extensions.DependencyInjection.ServiceCollectionContainerBuilderExtensions.BuildServiceProvider";
-    private const string CancellationTokenExpr = "default(global::System.Threading.CancellationToken)";
+    private const string GetService = "global::Microsoft.Extensions.DependencyInjection.ServiceProviderServiceExtensions.GetService";
+    private const string ActivatorUtilitiesType = "global::Microsoft.Extensions.DependencyInjection.ActivatorUtilities";
 
     // クラス全体で共有する静的フィールド (target/provider/serializer/filter など) を含む
     // __shared__ ファイルを生成する。
@@ -47,9 +50,6 @@ internal static class WrapperBuilder
         var classKeyword = model.IsValueType ? "struct" : "class";
         builder.AppendLine($"partial {classKeyword} {model.ClassName}");
         builder.BeginBlock();
-
-        BuildStaticFields(builder, model);
-
         builder.EndBlock();
     }
 
@@ -89,77 +89,6 @@ internal static class WrapperBuilder
         builder.EndBlock();
     }
 
-    // 静的フィールドを出力する。ServiceResolver の有無に応じて
-    // __provider__ / __target__ / __bodySerializer__ / __requestValidator__ / __filterN__ を条件付きで生成する。
-    // Emits static fields: conditionally generates __provider__, __target__,
-    // __bodySerializer__, __requestValidator__, and __filterN__ based on ServiceResolver presence.
-    private static void BuildStaticFields(SourceBuilder builder, FunctionModel model)
-    {
-        var handlers = model.Handlers;
-        var hasBodyParam = handlers.Any(static h =>
-            h.Parameters.Any(static p => p.BindingKind == ParameterBindingKind.FromBody));
-        var hasValidation = handlers.Any(static h =>
-            h.Parameters.Any(static p => (p.BindingKind == ParameterBindingKind.FromBody) && !p.SkipValidation));
-
-        if (model.ServiceResolver != null)
-        {
-            builder.AppendLine($"private static readonly global::System.IServiceProvider __provider__ =");
-            builder.AppendLine($"    {BuildServiceProvider}({model.ServiceResolver.Type.FullName}.ConfigureServices());");
-            builder.NewLine();
-
-            var ctorArgs = String.Join(", ", model.ConstructorParameters.Select(static p => $"{GetRequiredService}<{p.FullName}>(__provider__)"));
-            builder.AppendLine($"private static readonly {model.FunctionType.FullName} __target__ = new {model.FunctionType.FullName}({ctorArgs});");
-        }
-        else
-        {
-            builder.AppendLine($"private static readonly {model.FunctionType.FullName} __target__ = new {model.FunctionType.FullName}();");
-        }
-
-        if (hasBodyParam)
-        {
-            builder.NewLine();
-            if (model.ServiceResolver != null)
-            {
-                builder.AppendLine($"private static readonly {BodySerializerType} __bodySerializer__ =");
-                builder.AppendLine($"    {GetRequiredService}<{BodySerializerType}>(__provider__);");
-            }
-            else
-            {
-                builder.AppendLine($"private static readonly {BodySerializerType} __bodySerializer__ =");
-                builder.AppendLine("    global::AzureFunctionsExtension.Serialization.JsonBodySerializer.Default;");
-            }
-        }
-
-        if (hasValidation)
-        {
-            builder.NewLine();
-            if (model.ServiceResolver != null)
-            {
-                builder.AppendLine($"private static readonly {RequestValidatorType} __requestValidator__ =");
-                builder.AppendLine($"    {GetRequiredService}<{RequestValidatorType}>(__provider__);");
-            }
-            else
-            {
-                builder.AppendLine($"private static readonly {RequestValidatorType} __requestValidator__ =");
-                builder.AppendLine("    new global::AzureFunctionsExtension.Validation.DataAnnotationsRequestValidator();");
-            }
-        }
-
-        foreach (var filter in model.Filters)
-        {
-            builder.NewLine();
-            if (model.ServiceResolver != null)
-            {
-                builder.AppendLine($"private static readonly {filter.FilterType.FullName} __filter{filter.Index}__ =");
-                builder.AppendLine($"    {GetRequiredService}<{filter.FilterType.FullName}>(__provider__);");
-            }
-            else
-            {
-                builder.AppendLine($"private static readonly {filter.FilterType.FullName} __filter{filter.Index}__ = new {filter.FilterType.FullName}();");
-            }
-        }
-    }
-
     // フィルターパイプラインから呼ばれる Inner メソッドを生成する。
     // FunctionInvocationContext 経由でリクエストを受け取り、パラメータバインドと実メソッド呼び出しを行う。
     // Generates the inner method called by the filter pipeline.
@@ -167,7 +96,9 @@ internal static class WrapperBuilder
     private static void BuildInnerMethod(SourceBuilder builder, FunctionModel model, HandlerModel handler)
     {
         builder.AppendLine($"private static async global::System.Threading.Tasks.ValueTask __{handler.MethodName}_Inner__(");
-        builder.AppendLine($"    {InvocationContextType} ctx)");
+        builder.AppendLine($"    {InvocationContextType} ctx,");
+        builder.AppendLine("    global::System.IServiceProvider services,");
+        builder.AppendLine($"    {model.FunctionType.FullName} target)");
         builder.BeginBlock();
 
         if (handler.Kind == HandlerKind.Http)
@@ -177,9 +108,19 @@ internal static class WrapperBuilder
             builder.AppendLine($"var req = ({HttpRequestType})ctx.Request!;");
             builder.NewLine();
         }
+        else if (handler.Kind == HandlerKind.Timer)
+        {
+            builder.AppendLine($"var timerInfo = ({TimerInfoType})ctx.Request!;");
+            builder.NewLine();
+        }
+        else if (handler.Kind == HandlerKind.Queue)
+        {
+            builder.AppendLine("var message = (string)ctx.Request!;");
+            builder.NewLine();
+        }
 
         BuildParameterBindings(builder, handler, hasFilter: true);
-        BuildHandlerInvocation(builder, model, handler, hasFilter: true);
+        BuildHandlerInvocation(builder, handler, hasFilter: true);
 
         builder.EndBlock();
     }
@@ -191,24 +132,26 @@ internal static class WrapperBuilder
     private static void BuildPipeline(SourceBuilder builder, FunctionModel model, HandlerModel handler)
     {
         var pascal = ToPascalCase(handler.MethodName);
-        builder.AppendLine($"private static readonly {FilterDelegateType} __{handler.MethodName}_Pipeline__ = Build{pascal}Pipeline();");
-        builder.NewLine();
-        builder.AppendLine($"private static {FilterDelegateType} Build{pascal}Pipeline()");
+        builder.AppendLine($"private static {FilterDelegateType} Build{pascal}Pipeline(");
+        builder.AppendLine("    global::System.IServiceProvider services,");
+        builder.AppendLine($"    {model.FunctionType.FullName} target)");
         builder.BeginBlock();
 
         var filters = model.Filters;
         // Inner メソッドをパイプラインの末端 (terminal) として設定する
         // Set the inner method as the terminal of the pipeline
-        builder.AppendLine($"{FilterDelegateType} p = __{handler.MethodName}_Inner__;");
+        builder.AppendLine($"{FilterDelegateType} p = ctx => __{handler.MethodName}_Inner__(ctx, services, target);");
         builder.NewLine();
 
         // 末尾のフィルターから先頭に向かって順に delegate を包み込む (onion model)
         // Wrap delegates from the last filter toward the first (onion model)
         for (var i = filters.Count - 1; i >= 0; i--)
         {
-            var idx = filters[i].Index;
+            var filterType = filters[i].FilterType.FullName;
             builder.AppendLine($"var inner{i} = p;");
-            builder.AppendLine($"p = ctx => __filter{idx}__.InvokeAsync(ctx, inner{i});");
+            builder.AppendLine($"var filter{i} = {GetService}<{filterType}>(services) ??");
+            builder.AppendLine($"    {ActivatorUtilitiesType}.CreateInstance<{filterType}>(services);");
+            builder.AppendLine($"p = ctx => filter{i}.InvokeAsync(ctx, inner{i});");
             if (i > 0)
             {
                 builder.NewLine();
@@ -258,19 +201,23 @@ internal static class WrapperBuilder
         builder.AppendLine($"    {FunctionContextType} context)");
         builder.BeginBlock();
 
+        BuildInvocationSetup(builder, model);
+        builder.NewLine();
+
         if (hasFilters)
         {
             builder.AppendLine($"var ctx = new {InvocationContextType}");
             builder.BeginBlock();
             builder.AppendLine("Request = req,");
             builder.AppendLine("FunctionContext = context,");
-            builder.AppendLine($"CancellationToken = {CancellationTokenExpr},");
+            builder.AppendLine("CancellationToken = context.CancellationToken,");
             builder.EndBlock(semicolon: true);
+            builder.AppendLine($"var pipeline = Build{ToPascalCase(handler.MethodName)}Pipeline(services, target);");
             builder.NewLine();
 
             builder.AppendLine("try");
             builder.BeginBlock();
-            builder.AppendLine($"await __{handler.MethodName}_Pipeline__(ctx);");
+            builder.AppendLine("await pipeline(ctx);");
             builder.EndBlock();
             builder.AppendLine($"catch ({ApiExceptionType} ex)");
             builder.BeginBlock();
@@ -288,7 +235,7 @@ internal static class WrapperBuilder
             builder.AppendLine("try");
             builder.BeginBlock();
             BuildParameterBindings(builder, handler, hasFilter: false);
-            BuildHandlerInvocation(builder, model, handler, hasFilter: false);
+            BuildHandlerInvocation(builder, handler, hasFilter: false);
             builder.EndBlock();
             builder.AppendLine($"catch ({ApiExceptionType} ex)");
             builder.BeginBlock();
@@ -318,18 +265,22 @@ internal static class WrapperBuilder
         builder.AppendLine($"    {FunctionContextType} context)");
         builder.BeginBlock();
 
+        BuildInvocationSetup(builder, model);
+        builder.NewLine();
+
         if (hasFilters)
         {
             builder.AppendLine($"var ctx = new {InvocationContextType}");
             builder.BeginBlock();
             builder.AppendLine("Request = timerInfo,");
             builder.AppendLine("FunctionContext = context,");
-            builder.AppendLine($"CancellationToken = {CancellationTokenExpr},");
+            builder.AppendLine("CancellationToken = context.CancellationToken,");
             builder.EndBlock(semicolon: true);
+            builder.AppendLine($"var pipeline = Build{ToPascalCase(handler.MethodName)}Pipeline(services, target);");
             builder.NewLine();
             builder.AppendLine("try");
             builder.BeginBlock();
-            builder.AppendLine($"await __{handler.MethodName}_Pipeline__(ctx);");
+            builder.AppendLine("await pipeline(ctx);");
             builder.EndBlock();
             builder.AppendLine("catch (global::System.Exception)");
             builder.BeginBlock();
@@ -341,7 +292,7 @@ internal static class WrapperBuilder
             builder.AppendLine("try");
             builder.BeginBlock();
             BuildTimerParameterBindings(builder, handler);
-            BuildHandlerInvocation(builder, model, handler, hasFilter: false);
+            BuildHandlerInvocation(builder, handler, hasFilter: false);
             builder.EndBlock();
             builder.AppendLine("catch (global::System.Exception)");
             builder.BeginBlock();
@@ -368,18 +319,22 @@ internal static class WrapperBuilder
         builder.AppendLine($"    {FunctionContextType} context)");
         builder.BeginBlock();
 
+        BuildInvocationSetup(builder, model);
+        builder.NewLine();
+
         if (hasFilters)
         {
             builder.AppendLine($"var ctx = new {InvocationContextType}");
             builder.BeginBlock();
             builder.AppendLine("Request = message,");
             builder.AppendLine("FunctionContext = context,");
-            builder.AppendLine($"CancellationToken = {CancellationTokenExpr},");
+            builder.AppendLine("CancellationToken = context.CancellationToken,");
             builder.EndBlock(semicolon: true);
+            builder.AppendLine($"var pipeline = Build{ToPascalCase(handler.MethodName)}Pipeline(services, target);");
             builder.NewLine();
             builder.AppendLine("try");
             builder.BeginBlock();
-            builder.AppendLine($"await __{handler.MethodName}_Pipeline__(ctx);");
+            builder.AppendLine("await pipeline(ctx);");
             builder.EndBlock();
             builder.AppendLine("catch (global::System.Exception)");
             builder.BeginBlock();
@@ -391,7 +346,7 @@ internal static class WrapperBuilder
             builder.AppendLine("try");
             builder.BeginBlock();
             BuildQueueParameterBindings(builder, handler);
-            BuildHandlerInvocation(builder, model, handler, hasFilter: false);
+            BuildHandlerInvocation(builder, handler, hasFilter: false);
             builder.EndBlock();
             builder.AppendLine("catch (global::System.Exception)");
             builder.BeginBlock();
@@ -423,7 +378,7 @@ internal static class WrapperBuilder
             var p = parameters[i];
             if (p.BindingKind == ParameterBindingKind.FromServices)
             {
-                builder.AppendLine($"var p{i} = {GetRequiredService}<{p.Type.FullName}>(__provider__);");
+                builder.AppendLine($"var p{i} = {GetRequiredService}<{p.Type.FullName}>(services);");
                 builder.NewLine();
             }
         }
@@ -439,7 +394,7 @@ internal static class WrapperBuilder
             var p = parameters[i];
             if (p.BindingKind == ParameterBindingKind.FromServices)
             {
-                builder.AppendLine($"var p{i} = {GetRequiredService}<{p.Type.FullName}>(__provider__);");
+                builder.AppendLine($"var p{i} = {GetRequiredService}<{p.Type.FullName}>(services);");
                 builder.NewLine();
             }
         }
@@ -466,14 +421,48 @@ internal static class WrapperBuilder
             case ParameterBindingKind.Logger:
                 return;
             case ParameterBindingKind.FromServices:
-                builder.AppendLine($"var {pVar} = {GetRequiredService}<{typeName}>(__provider__);");
+                builder.AppendLine($"var {pVar} = {GetRequiredService}<{typeName}>(services);");
                 builder.NewLine();
                 return;
             case ParameterBindingKind.FromBody:
-                builder.AppendLine($"var {pVar} = __bodySerializer__.Deserialize<{typeName}>(req.Body);");
+                builder.AppendLine($"var bodySerializer{index} = {GetService}<{BodySerializerType}>(services) ?? {DefaultBodySerializerType}.Default;");
+                builder.AppendLine($"var {pVar} = default({typeName})!;");
+                builder.AppendLine("try");
+                builder.BeginBlock();
+                builder.AppendLine($"{pVar} = bodySerializer{index}.Deserialize<{typeName}>(req.Body);");
+                builder.EndBlock();
+                builder.AppendLine($"catch ({JsonExceptionType})");
+                builder.BeginBlock();
+                if (hasFilter)
+                {
+                    builder.AppendLine($"ctx.Result = new {BadRequestResultType}(\"Invalid request body.\");");
+                    builder.AppendLine("return;");
+                }
+                else
+                {
+                    builder.AppendLine($"return new {BadRequestResultType}(\"Invalid request body.\");");
+                }
+                builder.EndBlock();
+                if (!IsNullableBodyParameter(param))
+                {
+                    builder.AppendLine($"if ({pVar} is null)");
+                    builder.BeginBlock();
+                    if (hasFilter)
+                    {
+                        builder.AppendLine($"ctx.Result = new {BadRequestResultType}(\"Request body is required.\");");
+                        builder.AppendLine("return;");
+                    }
+                    else
+                    {
+                        builder.AppendLine($"return new {BadRequestResultType}(\"Request body is required.\");");
+                    }
+                    builder.EndBlock();
+                }
+
                 if (!param.SkipValidation)
                 {
-                    builder.AppendLine($"if ({pVar} is not null && !__requestValidator__.Validate({pVar}))");
+                    builder.AppendLine($"var requestValidator{index} = {GetService}<{RequestValidatorType}>(services) ?? new {DefaultRequestValidatorType}();");
+                    builder.AppendLine($"if ({pVar} is not null && !requestValidator{index}.Validate({pVar}))");
                     builder.BeginBlock();
                     if (hasFilter)
                     {
@@ -781,16 +770,16 @@ internal static class WrapperBuilder
     // 戻り値がある場合は __result__ に格納し、フィルターモードなら ctx.Result に、直接モードなら return に使う。
     // Emits code to invoke the actual method on __target__.
     // If a result exists, stores it in __result__; in filter mode sets ctx.Result, otherwise returns it.
-    private static void BuildHandlerInvocation(SourceBuilder builder, FunctionModel model, HandlerModel handler, bool hasFilter)
+    private static void BuildHandlerInvocation(SourceBuilder builder, HandlerModel handler, bool hasFilter)
     {
-        var args = BuildCallArgs(handler, hasFilter, model.ServiceResolver != null);
+        var args = BuildCallArgs(handler, hasFilter);
         var awaitPrefix = handler.IsAsync ? "await " : string.Empty;
 
         if (handler.Kind != HandlerKind.Http)
         {
             if (handler.ResultType != null)
             {
-                builder.AppendLine($"var __result__ = {awaitPrefix}__target__.{handler.MethodName}({args});");
+                builder.AppendLine($"var __result__ = {awaitPrefix}target.{handler.MethodName}({args});");
                 if (hasFilter)
                 {
                     builder.AppendLine("ctx.Result = __result__;");
@@ -798,13 +787,13 @@ internal static class WrapperBuilder
             }
             else
             {
-                builder.AppendLine($"{awaitPrefix}__target__.{handler.MethodName}({args});");
+                builder.AppendLine($"{awaitPrefix}target.{handler.MethodName}({args});");
             }
 
             return;
         }
 
-        builder.AppendLine($"var __result__ = {awaitPrefix}__target__.{handler.MethodName}({args});");
+        builder.AppendLine($"var __result__ = {awaitPrefix}target.{handler.MethodName}({args});");
         if (hasFilter)
         {
             builder.AppendLine("ctx.Result = __result__;");
@@ -817,7 +806,7 @@ internal static class WrapperBuilder
 
     // 各パラメータのバインディング種別に応じた呼び出し引数式の文字列を組み立てる。
     // Builds the comma-separated argument expression string for each parameter based on its binding kind.
-    private static string BuildCallArgs(HandlerModel handler, bool hasFilter, bool hasProvider)
+    private static string BuildCallArgs(HandlerModel handler, bool hasFilter)
     {
         var parameters = handler.Parameters;
         var argParts = new List<string>();
@@ -834,12 +823,10 @@ internal static class WrapperBuilder
                     argParts.Add(hasFilter ? "ctx.FunctionContext" : "context");
                     break;
                 case ParameterBindingKind.CancellationToken:
-                    argParts.Add(hasFilter ? "ctx.CancellationToken" : CancellationTokenExpr);
+                    argParts.Add(hasFilter ? "ctx.CancellationToken" : "context.CancellationToken");
                     break;
                 case ParameterBindingKind.Logger:
-                    argParts.Add(hasProvider
-                        ? $"{GetRequiredService}<{p.Type.FullName}>(__provider__)"
-                        : "default!");
+                    argParts.Add($"{GetRequiredService}<{p.Type.FullName}>(services)");
                     break;
                 case ParameterBindingKind.FromTrigger:
                     argParts.Add(handler.Kind == HandlerKind.Timer ? "timerInfo" : "message");
@@ -851,6 +838,17 @@ internal static class WrapperBuilder
         }
 
         return String.Join(", ", argParts);
+    }
+
+    private static void BuildInvocationSetup(SourceBuilder builder, FunctionModel model)
+    {
+        builder.AppendLine("var services = context.InstanceServices;");
+        builder.AppendLine($"var target = {ActivatorUtilitiesType}.CreateInstance<{model.FunctionType.FullName}>(services);");
+    }
+
+    private static bool IsNullableBodyParameter(ParameterModel param)
+    {
+        return param.Type.IsNullable || (param.Type.IsReferenceType && param.Type.IsNullableReferenceType);
     }
 
     private static string ToPascalCase(string name)

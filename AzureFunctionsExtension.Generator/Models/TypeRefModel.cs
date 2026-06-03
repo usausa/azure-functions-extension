@@ -5,4 +5,6 @@ internal sealed record TypeRefModel(
     bool IsArray,
     TypeRefModel? ElementType,
     bool IsNullable,
-    TypeRefModel? UnderlyingType);
+    TypeRefModel? UnderlyingType,
+    bool IsReferenceType,
+    bool IsNullableReferenceType);

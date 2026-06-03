@@ -9,7 +9,6 @@ using Microsoft.Extensions.Logging;
 using IActionResult = Microsoft.AspNetCore.Mvc.IActionResult;
 
 [AzureFunction]
-[ServiceResolver(typeof(ServiceResolver))]
 internal sealed partial class Function
 {
     private static readonly Action<ILogger, int, int?, int, Exception?> QueryRequest =

@@ -7,7 +7,6 @@ using Microsoft.Extensions.Logging;
 
 // Demonstrates [QueueEndpoint] and [FromServices] parameter injection.
 [AzureFunction]
-[ServiceResolver(typeof(ServiceResolver))]
 internal sealed partial class QueueFunction
 {
     private static readonly Action<ILogger, string, string, Exception?> MessageReceived =

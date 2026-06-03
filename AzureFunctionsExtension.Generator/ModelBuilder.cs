@@ -1,6 +1,8 @@
 #pragma warning disable IDE0060, IDE0042, SA1313
 namespace AzureFunctionsExtension.Generator;
 
+using System.Text.RegularExpressions;
+
 using AzureFunctionsExtension.Generator.Models;
 
 using Microsoft.CodeAnalysis;
@@ -11,7 +13,6 @@ using SourceGenerateHelper;
 
 internal static class ModelBuilder
 {
-    private const string ServiceResolverAttributeName = "AzureFunctionsExtension.Annotations.ServiceResolverAttribute";
     private const string FilterAttributeName = "AzureFunctionsExtension.Annotations.FilterAttribute`1";
     private const string HttpEndpointAttributeName = "AzureFunctionsExtension.Annotations.HttpEndpointAttribute";
     private const string TimerEndpointAttributeName = "AzureFunctionsExtension.Annotations.TimerEndpointAttribute";
@@ -25,7 +26,6 @@ internal static class ModelBuilder
     private const string FromTriggerAttributeName = "AzureFunctionsExtension.Annotations.FromTriggerAttribute";
 
     private const string IFunctionFilterFullName = "AzureFunctionsExtension.Filters.IFunctionFilter";
-    private const string IServiceCollectionFullName = "Microsoft.Extensions.DependencyInjection.IServiceCollection";
 
     private const string HttpRequestFullName = "Microsoft.AspNetCore.Http.HttpRequest";
     private const string FunctionContextFullName = "Microsoft.Azure.Functions.Worker.FunctionContext";
@@ -53,46 +53,6 @@ internal static class ModelBuilder
 
         var functionType = MakeTypeRef(symbol);
 
-        // 最もパラメータ数が多い public コンストラクタを選択する
-        // Select the public constructor with the most parameters
-        var ctor = symbol.InstanceConstructors
-            .Where(static c => c.DeclaredAccessibility == Accessibility.Public)
-            .OrderByDescending(static c => c.Parameters.Length)
-            .FirstOrDefault();
-
-        var ctorParams = ctor?.Parameters.Select(static p => MakeTypeRef(p.Type)).ToArray() ?? [];
-
-        // ServiceResolver 属性を解析して DI コンテナ構成メソッドを確認する
-        // Inspect ServiceResolver attribute to verify DI container configuration method
-        ServiceResolverModel? serviceResolver = null;
-        var serviceResolverAttr = symbol.GetAttributes()
-            .FirstOrDefault(static a => a.AttributeClass?.ToDisplayString() == ServiceResolverAttributeName);
-        if (serviceResolverAttr != null)
-        {
-            if (serviceResolverAttr.ConstructorArguments.Length > 0 &&
-                serviceResolverAttr.ConstructorArguments[0].Value is INamedTypeSymbol resolverType)
-            {
-                var configureMethod = resolverType.GetMembers("ConfigureServices")
-                    .OfType<IMethodSymbol>()
-                    .FirstOrDefault(static m => m.IsStatic && (m.DeclaredAccessibility == Accessibility.Public)
-                        && (m.Parameters.Length == 0)
-                        && (m.ReturnType.ToDisplayString() == IServiceCollectionFullName));
-
-                if (configureMethod == null)
-                {
-                    return Results.Error<FunctionModel>(new DiagnosticInfo(
-                        Diagnostics.InvalidServiceResolverType, syntax.GetLocation(), resolverType.ToDisplayString()));
-                }
-
-                serviceResolver = new ServiceResolverModel(MakeTypeRef(resolverType));
-            }
-        }
-        else if (ctorParams.Length > 0)
-        {
-            return Results.Error<FunctionModel>(new DiagnosticInfo(
-                Diagnostics.MissingServiceResolver, syntax.GetLocation(), symbol.Name));
-        }
-
         // Filter 属性を収集し、Order で昇順ソートしてパイプライン順序を確定する
         // Collect Filter attributes and sort by Order to determine pipeline sequence
         var filterAttrs = symbol.GetAttributes()
@@ -111,14 +71,15 @@ internal static class ModelBuilder
             .ToArray();
 
         var diagnostics = new List<DiagnosticInfo>();
-        foreach (var fd in sortedFilters)
+        foreach (var filterAttr in filterAttrs)
         {
-            var filterAttr = filterAttrs.First(x => GetFilterOrder(x.Attr) == fd.Order);
             var filterTypeArg = filterAttr.Attr.AttributeClass!.TypeArguments[0];
             if (filterTypeArg is INamedTypeSymbol filterTypeSym && !ImplementsInterface(filterTypeSym, IFunctionFilterFullName))
             {
                 diagnostics.Add(new DiagnosticInfo(
-                    Diagnostics.FilterNotImplementIFunctionFilter, syntax.GetLocation(), fd.FilterType.FullName));
+                    Diagnostics.FilterNotImplementIFunctionFilter,
+                    syntax.GetLocation(),
+                    filterTypeSym.ToDisplayString(SymbolDisplayFormat.FullyQualifiedFormat)));
             }
         }
 
@@ -156,8 +117,6 @@ internal static class ModelBuilder
             symbol.Name,
             symbol.IsValueType,
             functionType,
-            new EquatableArray<TypeRefModel>(ctorParams),
-            serviceResolver,
             new EquatableArray<FilterDescriptorModel>(sortedFilters),
             new EquatableArray<HandlerModel>(handlers.ToArray())));
     }
@@ -279,8 +238,22 @@ internal static class ModelBuilder
                 }
             }
 
-            var paramModel = BuildParameterModel(param, kind.Value);
+            var paramModel = BuildParameterModel(param, kind.Value, diagnostics);
+            if (paramModel == null)
+            {
+                return null;
+            }
+
             parameters.Add(paramModel);
+        }
+
+        if (kind == HandlerKind.Http)
+        {
+            ValidateRouteBindings(route ?? method.Name, parameters, method, diagnostics);
+            if (diagnostics.Count > 0)
+            {
+                return null;
+            }
         }
 
         // 戻り値の型を解析して非同期かどうかと結果型を確定する
@@ -347,7 +320,7 @@ internal static class ModelBuilder
 
     // パラメータシンボルからバインディング属性を読み取り、ParameterModel を構築する。
     // Reads binding attributes from a parameter symbol and builds a ParameterModel.
-    private static ParameterModel BuildParameterModel(IParameterSymbol param, HandlerKind handlerKind)
+    private static ParameterModel? BuildParameterModel(IParameterSymbol param, HandlerKind handlerKind, List<DiagnosticInfo> diagnostics)
     {
         var paramType = param.Type;
         var bindingKind = ParameterBindingKind.FromQuery;
@@ -408,6 +381,16 @@ internal static class ModelBuilder
             }
         }
 
+        if (bindingAttrCount > 1)
+        {
+            diagnostics.Add(new DiagnosticInfo(
+                Diagnostics.MultipleBindingAttributes,
+                param.Locations.FirstOrDefault(),
+                param.ContainingSymbol.Name,
+                param.Name));
+            return null;
+        }
+
         // バインディング属性がない場合は型名で特殊パラメータ (HttpRequest など) を自動判定する
         // No binding attribute: auto-detect special parameters (HttpRequest, FunctionContext, etc.) by type name
         if (bindingAttrCount == 0)
@@ -441,6 +424,15 @@ internal static class ModelBuilder
             }
         }
 
+        if (!IsSupportedBindingType(paramType, bindingKind, converterMethod))
+        {
+            diagnostics.Add(new DiagnosticInfo(
+                Diagnostics.UnsupportedBindingType,
+                param.Locations.FirstOrDefault(),
+                paramType.ToDisplayString(SymbolDisplayFormat.MinimallyQualifiedFormat)));
+            return null;
+        }
+
         // 明示的なデフォルト値があれば文字列リテラルとして保持する
         // Preserve explicit default value as a string literal if present
         var hasDefault = param.HasExplicitDefaultValue;
@@ -459,6 +451,99 @@ internal static class ModelBuilder
             skipValidation,
             hasDefault,
             defaultValueLiteral);
+    }
+
+    private static bool IsSupportedBindingType(ITypeSymbol type, ParameterBindingKind bindingKind, string converterMethod)
+    {
+        return bindingKind switch
+        {
+            ParameterBindingKind.HttpRequest or
+            ParameterBindingKind.FunctionContext or
+            ParameterBindingKind.CancellationToken or
+            ParameterBindingKind.Logger or
+            ParameterBindingKind.FromServices or
+            ParameterBindingKind.FromTrigger or
+            ParameterBindingKind.FromBody => true,
+            ParameterBindingKind.FromQuery or
+            ParameterBindingKind.FromHeader or
+            ParameterBindingKind.FromRoute => IsSupportedTextBindingType(type, converterMethod),
+            _ => false,
+        };
+    }
+
+    private static bool IsSupportedTextBindingType(ITypeSymbol type, string converterMethod)
+    {
+        if (type is IArrayTypeSymbol arrayType)
+        {
+            return IsSupportedTextBindingType(arrayType.ElementType, GetConverterMethod(arrayType.ElementType));
+        }
+
+        if ((type is INamedTypeSymbol namedType) &&
+            (namedType.OriginalDefinition.ToDisplayString() == "System.Nullable<T>"))
+        {
+            return IsSupportedTextBindingType(namedType.TypeArguments[0], GetConverterMethod(namedType.TypeArguments[0]));
+        }
+
+        return !String.IsNullOrEmpty(converterMethod) || (type.SpecialType == SpecialType.System_String);
+    }
+
+    private static void ValidateRouteBindings(string route, IEnumerable<ParameterModel> parameters, IMethodSymbol method, List<DiagnosticInfo> diagnostics)
+    {
+        if (String.IsNullOrWhiteSpace(route))
+        {
+            return;
+        }
+
+        var routeParameters = ExtractRouteParameterNames(route);
+        if (routeParameters.Count == 0)
+        {
+            return;
+        }
+
+        var boundRouteParameters = parameters
+            .Where(static p => p.BindingKind == ParameterBindingKind.FromRoute)
+            .Select(static p => p.Key);
+        var boundRouteParameterSet = new HashSet<string>(boundRouteParameters, StringComparer.OrdinalIgnoreCase);
+
+        foreach (var routeParameter in routeParameters)
+        {
+            if (!boundRouteParameterSet.Contains(routeParameter))
+            {
+                diagnostics.Add(new DiagnosticInfo(
+                    Diagnostics.MissingRouteParameter,
+                    method.Locations.FirstOrDefault(),
+                    routeParameter,
+                    method.Name));
+            }
+        }
+    }
+
+    private static HashSet<string> ExtractRouteParameterNames(string route)
+    {
+        var parameters = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        foreach (Match match in Regex.Matches(route, "\\{([^{}]+)\\}"))
+        {
+            if (!match.Success)
+            {
+                continue;
+            }
+
+            var token = match.Groups[1].Value.Trim();
+            token = token.TrimStart('*');
+
+            var separatorIndex = token.IndexOfAny([':', '=', '?']);
+            if (separatorIndex >= 0)
+            {
+                token = token.Substring(0, separatorIndex);
+            }
+
+            if (!String.IsNullOrWhiteSpace(token))
+            {
+                parameters.Add(token);
+            }
+        }
+
+        return parameters;
     }
 
     private static string FormatDefaultValue(object? value, ITypeSymbol type)
@@ -532,6 +617,8 @@ internal static class ModelBuilder
     {
         var isNullable = false;
         TypeRefModel? underlyingType = null;
+        var isReferenceType = type.IsReferenceType;
+        var isNullableReferenceType = isReferenceType && (type.NullableAnnotation == NullableAnnotation.Annotated);
 
         if ((type is INamedTypeSymbol namedType) &&
             (namedType.OriginalDefinition.ToDisplayString() == "System.Nullable<T>"))
@@ -547,7 +634,9 @@ internal static class ModelBuilder
                 true,
                 MakeTypeRef(arr.ElementType),
                 false,
-                null);
+                null,
+                true,
+                false);
         }
 
         return new TypeRefModel(
@@ -555,6 +644,8 @@ internal static class ModelBuilder
             false,
             null,
             isNullable,
-            underlyingType);
+            underlyingType,
+            isReferenceType,
+            isNullableReferenceType);
     }
 }
