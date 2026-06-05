@@ -101,7 +101,7 @@ internal static class FunctionModelBuilder
             }
 
             var handlerResult = BuildHandlerModel(member, diagnostics);
-            if (handlerResult == null)
+            if (handlerResult is null)
             {
                 if (diagnostics.Count > 0)
                 {
@@ -126,7 +126,7 @@ internal static class FunctionModelBuilder
     private static bool IsFilterAttribute(AttributeData attr)
     {
         var attrClass = attr.AttributeClass;
-        if (attrClass == null)
+        if (attrClass is null)
         {
             return false;
         }
@@ -190,7 +190,7 @@ internal static class FunctionModelBuilder
                 if (attr.ConstructorArguments.Length > 2)
                 {
                     var levelValue = attr.ConstructorArguments[2].Value;
-                    authorizationLevel = levelValue != null ? GetAuthorizationLevelName((int)levelValue) : "Function";
+                    authorizationLevel = levelValue is not null ? GetAuthorizationLevelName((int)levelValue) : "Function";
                 }
                 else
                 {
@@ -214,7 +214,7 @@ internal static class FunctionModelBuilder
 
         // エンドポイント属性がなければハンドラーではないのでスキップ
         // Skip if no endpoint attribute is present
-        if (kind == null)
+        if (kind is null)
         {
             return null;
         }
@@ -249,7 +249,7 @@ internal static class FunctionModelBuilder
             }
 
             var paramModel = BuildParameterModel(param, kind.Value, diagnostics);
-            if (paramModel == null)
+            if (paramModel is null)
             {
                 return null;
             }
@@ -563,7 +563,7 @@ internal static class FunctionModelBuilder
 
     private static string FormatDefaultValue(object? value, ITypeSymbol type)
     {
-        if (value == null)
+        if (value is null)
         {
             return "default";
         }

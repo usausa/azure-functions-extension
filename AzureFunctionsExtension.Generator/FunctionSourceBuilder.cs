@@ -320,7 +320,7 @@ internal static class FunctionSourceBuilder
     private static void BuildQueueHandlerMethod(SourceBuilder builder, FunctionModel model, HandlerModel handler, bool hasFilters)
     {
         var queueName = handler.QueueName ?? "myqueue";
-        var connectionPart = handler.QueueConnection != null ? $", Connection = \"{handler.QueueConnection}\"" : string.Empty;
+        var connectionPart = handler.QueueConnection is not null ? $", Connection = \"{handler.QueueConnection}\"" : string.Empty;
 
         builder.AppendLine($"public static async global::System.Threading.Tasks.Task {handler.MethodName}_Handler(");
         builder.AppendLine($"    [{QueueTriggerType}(\"{queueName}\"{connectionPart})] string message,");
@@ -512,7 +512,7 @@ internal static class FunctionSourceBuilder
         var key = param.Key;
         var defaultLiteral = param.HasDefault ? (param.DefaultValueLiteral ?? "default") : null;
 
-        if (param.Type.IsArray && (param.Type.ElementType != null))
+        if (param.Type.IsArray && (param.Type.ElementType is not null))
         {
             var elemType = param.Type.ElementType.FullName;
             var converterMethod = param.ConverterMethod;
@@ -528,7 +528,7 @@ internal static class FunctionSourceBuilder
             {
                 builder.AppendLine($"{pVar}[i] = {pVar}parts[i];");
             }
-            else if (param.Type.ElementType.IsNullable && (param.Type.ElementType.UnderlyingType != null))
+            else if (param.Type.ElementType.IsNullable && (param.Type.ElementType.UnderlyingType is not null))
             {
                 var baseElemType = param.Type.ElementType.UnderlyingType.FullName;
                 var isEnum = converterMethod == "TryToEnum";
@@ -573,11 +573,11 @@ internal static class FunctionSourceBuilder
             builder.EndBlock();
             builder.NewLine();
         }
-        else if (param.Type.IsNullable && (param.Type.UnderlyingType != null))
+        else if (param.Type.IsNullable && (param.Type.UnderlyingType is not null))
         {
             var baseType = param.Type.UnderlyingType.FullName;
             var converterMethod = param.ConverterMethod;
-            var init = defaultLiteral != null ? $"({typeName}){defaultLiteral}" : $"({typeName})null";
+            var init = defaultLiteral is not null ? $"({typeName}){defaultLiteral}" : $"({typeName})null";
             builder.AppendLine($"var {pVar} = {init};");
             builder.AppendLine($"if ({dictExpr}.TryGetValue(\"{key}\", out var {pRaw}) &&");
             builder.AppendLine($"    {pRaw} != global::Microsoft.Extensions.Primitives.StringValues.Empty)");
@@ -615,7 +615,7 @@ internal static class FunctionSourceBuilder
             var converterMethod = param.ConverterMethod;
             if (String.IsNullOrEmpty(converterMethod))
             {
-                var init = defaultLiteral != null ? $"({typeName}){defaultLiteral}!" : $"default({typeName})!";
+                var init = defaultLiteral is not null ? $"({typeName}){defaultLiteral}!" : $"default({typeName})!";
                 builder.AppendLine($"var {pVar} = {init};");
                 builder.AppendLine($"if ({dictExpr}.TryGetValue(\"{key}\", out var {pRaw}) &&");
                 builder.AppendLine($"    {pRaw} != global::Microsoft.Extensions.Primitives.StringValues.Empty)");
@@ -626,7 +626,7 @@ internal static class FunctionSourceBuilder
             }
             else
             {
-                var init = defaultLiteral != null ? $"({typeName}){defaultLiteral}" : $"default({typeName})";
+                var init = defaultLiteral is not null ? $"({typeName}){defaultLiteral}" : $"default({typeName})";
                 builder.AppendLine($"var {pVar} = {init};");
                 builder.AppendLine($"if ({dictExpr}.TryGetValue(\"{key}\", out var {pRaw}) &&");
                 builder.AppendLine($"    {pRaw} != global::Microsoft.Extensions.Primitives.StringValues.Empty)");
@@ -664,10 +664,10 @@ internal static class FunctionSourceBuilder
         var converterMethod = param.ConverterMethod;
         var defaultLiteral = param.HasDefault ? (param.DefaultValueLiteral ?? "default") : null;
 
-        if (param.Type.IsNullable && (param.Type.UnderlyingType != null))
+        if (param.Type.IsNullable && (param.Type.UnderlyingType is not null))
         {
             var baseType = param.Type.UnderlyingType.FullName;
-            var init = defaultLiteral != null ? $"({typeName}){defaultLiteral}" : $"({typeName})null";
+            var init = defaultLiteral is not null ? $"({typeName}){defaultLiteral}" : $"({typeName})null";
             builder.AppendLine($"var {pVar} = {init};");
             builder.AppendLine($"if (req.RouteValues.TryGetValue(\"{key}\", out var {pRaw}obj) && {pRaw}obj is string {pRaw})");
             builder.BeginBlock();
@@ -701,7 +701,7 @@ internal static class FunctionSourceBuilder
         }
         else
         {
-            var init = defaultLiteral != null ? $"({typeName}){defaultLiteral}" : $"default({typeName})";
+            var init = defaultLiteral is not null ? $"({typeName}){defaultLiteral}" : $"default({typeName})";
             builder.AppendLine($"var {pVar} = {init};");
             builder.AppendLine($"if (req.RouteValues.TryGetValue(\"{key}\", out var {pRaw}obj) && {pRaw}obj is string {pRaw})");
             builder.BeginBlock();
@@ -745,10 +745,10 @@ internal static class FunctionSourceBuilder
         var converterMethod = param.ConverterMethod;
         var defaultLiteral = param.HasDefault ? (param.DefaultValueLiteral ?? "default") : null;
 
-        if (param.Type.IsNullable && (param.Type.UnderlyingType != null))
+        if (param.Type.IsNullable && (param.Type.UnderlyingType is not null))
         {
             var baseType = param.Type.UnderlyingType.FullName;
-            var init = defaultLiteral != null ? $"({typeName}){defaultLiteral}" : $"({typeName})null";
+            var init = defaultLiteral is not null ? $"({typeName}){defaultLiteral}" : $"({typeName})null";
             builder.AppendLine($"var {pVar} = {init};");
             builder.AppendLine($"if (req.Headers.TryGetValue(\"{key}\", out var {pRaw}sv) &&");
             builder.AppendLine($"    {pRaw}sv != global::Microsoft.Extensions.Primitives.StringValues.Empty)");
@@ -785,8 +785,8 @@ internal static class FunctionSourceBuilder
         else
         {
             var init = String.IsNullOrEmpty(converterMethod)
-                ? (defaultLiteral != null ? $"({typeName}){defaultLiteral}!" : $"default({typeName})!")
-                : (defaultLiteral != null ? $"({typeName}){defaultLiteral}" : $"default({typeName})");
+                ? (defaultLiteral is not null ? $"({typeName}){defaultLiteral}!" : $"default({typeName})!")
+                : (defaultLiteral is not null ? $"({typeName}){defaultLiteral}" : $"default({typeName})");
             builder.AppendLine($"var {pVar} = {init};");
             builder.AppendLine($"if (req.Headers.TryGetValue(\"{key}\", out var {pRaw}sv) &&");
             builder.AppendLine($"    {pRaw}sv != global::Microsoft.Extensions.Primitives.StringValues.Empty)");
@@ -836,7 +836,7 @@ internal static class FunctionSourceBuilder
 
         if (handler.Kind != HandlerKind.Http)
         {
-            if (handler.ResultType != null)
+            if (handler.ResultType is not null)
             {
                 builder.AppendLine($"var __result__ = {awaitPrefix}target.{handler.MethodName}({args});");
                 if (hasFilter)
@@ -854,7 +854,7 @@ internal static class FunctionSourceBuilder
 
         // 戻り値なし (void / Task / ValueTask) は実行後に 200 OK を返す
         // No return value (void / Task / ValueTask): invoke then return 200 OK
-        if (handler.ResultType == null)
+        if (handler.ResultType is null)
         {
             builder.AppendLine($"{awaitPrefix}target.{handler.MethodName}({args});");
             EmitHttpResult(builder, $"{ResultsType}.Ok()", hasFilter);
