@@ -31,8 +31,9 @@ internal static class FunctionModelBuilder
 
     private const string HttpRequestFullName = "Microsoft.AspNetCore.Http.HttpRequest";
     private const string FunctionContextFullName = "Microsoft.Azure.Functions.Worker.FunctionContext";
-    private const string CancellationTokenFullName = "System.Threading.CancellationToken";
     private const string IActionResultFullName = "Microsoft.AspNetCore.Mvc.IActionResult";
+
+    private const string CancellationTokenFullName = "System.Threading.CancellationToken";
     // ReSharper restore InconsistentNaming
 
     // [AzureFunctionAttribute] が付与されたクラスから FunctionModel を構築するエントリーポイント。

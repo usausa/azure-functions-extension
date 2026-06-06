@@ -7,6 +7,7 @@ using SourceGenerateHelper;
 
 internal static class FunctionSourceBuilder
 {
+    // ReSharper disable InconsistentNaming
     private const string FunctionAttributeType = "global::Microsoft.Azure.Functions.Worker.Function";
     private const string HttpTriggerType = "global::Microsoft.Azure.Functions.Worker.HttpTrigger";
     private const string TimerTriggerType = "global::Microsoft.Azure.Functions.Worker.TimerTrigger";
@@ -34,6 +35,7 @@ internal static class FunctionSourceBuilder
     private const string GetLoggerMethod = "global::Microsoft.Azure.Functions.Worker.FunctionContextLoggerExtensions.GetLogger";
     private const string LogErrorMethod = "global::Microsoft.Extensions.Logging.LoggerExtensions.LogError";
     private const string AsSpanMethod = "global::System.MemoryExtensions.AsSpan";
+    // ReSharper restore InconsistentNaming
 
     // クラス全体で共有する静的フィールド (target/provider/serializer/filter など) を含む
     // __shared__ ファイルを生成する。
@@ -872,14 +874,7 @@ internal static class FunctionSourceBuilder
     // Emits the HTTP handler result: assigns to ctx.Result in filter mode, otherwise returns it.
     private static void EmitHttpResult(SourceBuilder builder, string resultExpr, bool hasFilter)
     {
-        if (hasFilter)
-        {
-            builder.AppendLine($"ctx.Result = {resultExpr};");
-        }
-        else
-        {
-            builder.AppendLine($"return {resultExpr};");
-        }
+        builder.AppendLine(hasFilter ? $"ctx.Result = {resultExpr};" : $"return {resultExpr};");
     }
 
     // 各パラメータのバインディング種別に応じた呼び出し引数式の文字列を組み立てる。
