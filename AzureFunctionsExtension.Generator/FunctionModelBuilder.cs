@@ -14,6 +14,7 @@ using SourceGenerateHelper;
 
 internal static class FunctionModelBuilder
 {
+    // ReSharper disable InconsistentNaming
     private const string FilterAttributeName = "AzureFunctionsExtension.Annotations.FilterAttribute`1";
     private const string HttpEndpointAttributeName = "AzureFunctionsExtension.Annotations.HttpEndpointAttribute";
     private const string TimerEndpointAttributeName = "AzureFunctionsExtension.Annotations.TimerEndpointAttribute";
@@ -32,6 +33,7 @@ internal static class FunctionModelBuilder
     private const string FunctionContextFullName = "Microsoft.Azure.Functions.Worker.FunctionContext";
     private const string CancellationTokenFullName = "System.Threading.CancellationToken";
     private const string IActionResultFullName = "Microsoft.AspNetCore.Mvc.IActionResult";
+    // ReSharper restore InconsistentNaming
 
     // [AzureFunctionAttribute] が付与されたクラスから FunctionModel を構築するエントリーポイント。
     // Entry point: builds a FunctionModel from the class decorated with [AzureFunctionAttribute].
@@ -450,7 +452,7 @@ internal static class FunctionModelBuilder
         string? defaultValueLiteral = null;
         if (hasDefault)
         {
-            defaultValueLiteral = FormatDefaultValue(param.ExplicitDefaultValue, paramType);
+            defaultValueLiteral = FormatDefaultValue(param.ExplicitDefaultValue);
         }
 
         return new ParameterModel(
@@ -557,7 +559,7 @@ internal static class FunctionModelBuilder
         return parameters;
     }
 
-    private static string FormatDefaultValue(object? value, ITypeSymbol type)
+    private static string FormatDefaultValue(object? value)
     {
         if (value is null)
         {
@@ -626,7 +628,7 @@ internal static class FunctionModelBuilder
 
     // ITypeSymbol を TypeRefModel に変換する。配列・Nullable を考慮して再帰的に解決する。
     // Converts an ITypeSymbol to TypeRefModel, recursively handling arrays and Nullable<T>.
-    internal static TypeRefModel MakeTypeRef(ITypeSymbol type)
+    private static TypeRefModel MakeTypeRef(ITypeSymbol type)
     {
         var isNullable = false;
         TypeRefModel? underlyingType = null;
