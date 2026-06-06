@@ -151,7 +151,7 @@ internal static class FunctionSourceBuilder
         // Wrap delegates from the last filter toward the first (onion model)
         for (var i = filters.Count - 1; i >= 0; i--)
         {
-            var filterType = filters[i].FilterType.FullName;
+            var filterType = filters[i].FullName;
             builder.AppendLine($"var inner{i} = p;");
             builder.AppendLine($"var filter{i} = {GetService}<{filterType}>(services) ??");
             builder.AppendLine($"    {ActivatorUtilitiesType}.CreateInstance<{filterType}>(services);");

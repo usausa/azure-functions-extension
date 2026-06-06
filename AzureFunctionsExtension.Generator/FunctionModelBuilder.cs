@@ -65,11 +65,7 @@ internal static class FunctionModelBuilder
         var sortedFilters = filterAttrs
             .OrderBy(static x => GetFilterOrder(x.Attr))
             .ThenBy(static x => x.Index)
-            .Select((x, idx) =>
-            {
-                var filterType = x.Attr.AttributeClass!.TypeArguments[0];
-                return new FilterDescriptorModel(MakeTypeRef(filterType), GetFilterOrder(x.Attr), idx);
-            })
+            .Select(static x => MakeTypeRef(x.Attr.AttributeClass!.TypeArguments[0]))
             .ToArray();
 
         var diagnostics = new List<DiagnosticInfo>();
@@ -119,7 +115,7 @@ internal static class FunctionModelBuilder
             symbol.Name,
             symbol.IsValueType,
             functionType,
-            new EquatableArray<FilterDescriptorModel>(sortedFilters),
+            new EquatableArray<TypeRefModel>(sortedFilters),
             new EquatableArray<HandlerModel>(handlers.ToArray())));
     }
 

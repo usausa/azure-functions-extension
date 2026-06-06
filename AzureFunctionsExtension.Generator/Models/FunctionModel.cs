@@ -7,5 +7,5 @@ internal sealed record FunctionModel(
     string ClassName,
     bool IsValueType,
     TypeRefModel FunctionType,
-    EquatableArray<FilterDescriptorModel> Filters,
+    EquatableArray<TypeRefModel> Filters,
     EquatableArray<HandlerModel> Handlers);
