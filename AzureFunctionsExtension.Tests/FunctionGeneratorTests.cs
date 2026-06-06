@@ -88,7 +88,7 @@ public sealed class FunctionGeneratorTests
 
         var result = RunGenerator(source);
 
-        Assert.Contains(result.Diagnostics, static d => d.Id == "AFE0004");
+        Assert.Contains(result.Diagnostics, static d => d.Id == "AFE0005");
     }
 
     [Fact]
@@ -143,7 +143,7 @@ public sealed class FunctionGeneratorTests
 
         var result = RunGenerator(source);
 
-        Assert.Contains(result.Diagnostics, static d => d.Id == "AFE0010");
+        Assert.Contains(result.Diagnostics, static d => d.Id == "AFE0007");
     }
 
     [Fact]
