@@ -21,5 +21,5 @@ internal enum ParameterBindingKind
     FromRoute,
     FromBody,
     FromServices,
-    FromTrigger,
+    FromTrigger
 }

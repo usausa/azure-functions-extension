@@ -482,7 +482,7 @@ internal static class FunctionModelBuilder
             ParameterBindingKind.FromQuery or
             ParameterBindingKind.FromHeader or
             ParameterBindingKind.FromRoute => IsSupportedTextBindingType(type, converterMethod),
-            _ => false,
+            _ => false
         };
     }
 

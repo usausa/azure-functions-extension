@@ -20,5 +20,5 @@ internal enum HandlerKind
 {
     Http,
     Timer,
-    Queue,
+    Queue
 }

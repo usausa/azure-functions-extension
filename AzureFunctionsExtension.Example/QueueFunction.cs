@@ -2,7 +2,6 @@ namespace AzureFunctionsExtension.Example;
 
 using AzureFunctionsExtension.Annotations;
 
-using Microsoft.Azure.Functions.Worker;
 using Microsoft.Extensions.Logging;
 
 // Demonstrates [QueueEndpoint] and [FromServices] parameter injection.

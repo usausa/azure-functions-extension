@@ -734,7 +734,7 @@ public sealed class FunctionGeneratorTests
             typeof(HttpRequest).Assembly.Location,
             typeof(IActionResult).Assembly.Location,
             typeof(IServiceCollection).Assembly.Location,
-            typeof(ILogger<>).Assembly.Location,
+            typeof(ILogger<>).Assembly.Location
         };
 
         return [.. assemblyPaths.Select(static path => (MetadataReference)MetadataReference.CreateFromFile(path))];

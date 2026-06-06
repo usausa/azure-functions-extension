@@ -70,6 +70,6 @@ public static class StringConverter
 
     public static bool TryToEnum<T>(ReadOnlySpan<char> value, out T result)
         where T : struct, Enum
-        => Enum.TryParse<T>(value, ignoreCase: true, out result);
+        => Enum.TryParse(value, ignoreCase: true, out result);
 }
 #pragma warning restore CA1305, CS3001

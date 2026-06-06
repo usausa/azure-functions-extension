@@ -21,7 +21,7 @@ public class SystemTextJsonResult : ActionResult
 
     [UnconditionalSuppressMessage("Trimming", "IL2026", Justification = "Result serialization preserves the existing API shape.")]
     [UnconditionalSuppressMessage("AOT", "IL3050", Justification = "Result serialization preserves the existing API shape.")]
-    public override async Task ExecuteResultAsync(ActionContext context)
+    public override Task ExecuteResultAsync(ActionContext context)
     {
         var response = context.HttpContext.Response;
         response.StatusCode = StatusCode ?? StatusCodes.Status200OK;
@@ -32,6 +32,6 @@ public class SystemTextJsonResult : ActionResult
             ? jsonOpts.Value.Options
             : null;
 
-        await JsonSerializer.SerializeAsync(response.Body, Value, Value?.GetType() ?? typeof(object), options).ConfigureAwait(false);
+        return JsonSerializer.SerializeAsync(response.Body, Value, Value?.GetType() ?? typeof(object), options);
     }
 }
