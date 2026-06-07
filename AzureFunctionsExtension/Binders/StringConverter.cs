@@ -1,6 +1,9 @@
 namespace AzureFunctionsExtension.Binders;
 
-#pragma warning disable CA1305, CS3001
+using System.Diagnostics.CodeAnalysis;
+
+#pragma warning disable CA1305
+[ExcludeFromCodeCoverage]
 public static class StringConverter
 {
     public static bool TryToBoolean(ReadOnlySpan<char> value, out bool result)
@@ -72,4 +75,4 @@ public static class StringConverter
         where T : struct, Enum
         => Enum.TryParse(value, ignoreCase: true, out result);
 }
-#pragma warning restore CA1305, CS3001
+#pragma warning restore CA1305
