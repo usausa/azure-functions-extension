@@ -682,6 +682,34 @@ public sealed class FunctionGeneratorTests
         Assert.DoesNotContain(")Advanced", result.GeneratedCode, StringComparison.Ordinal);
     }
 
+    [Fact]
+    public void GeneratesArrayBindingForQueryParameter()
+    {
+        const string source = """
+            namespace TestFunctions;
+
+            using AzureFunctionsExtension.Annotations;
+            using Microsoft.AspNetCore.Mvc;
+
+            [AzureFunction]
+            public sealed partial class SampleFunction
+            {
+                [HttpEndpoint("get", "array")]
+                public IActionResult Run([AzureFunctionsExtension.Annotations.FromQuery] int[] values)
+                {
+                    return new EmptyResult();
+                }
+            }
+            """;
+
+        var result = RunGenerator(source);
+
+        AssertNoGeneratorErrors(result);
+        Assert.Contains("global::System.Array.Empty<", result.GeneratedCode, StringComparison.Ordinal);
+        Assert.Contains(".Split(',')", result.GeneratedCode, StringComparison.Ordinal);
+        Assert.Contains("TryToInt32", result.GeneratedCode, StringComparison.Ordinal);
+    }
+
     private static void AssertNoGeneratorErrors(GeneratorTestResult result)
     {
         var errors = result.Diagnostics
