@@ -436,7 +436,7 @@ internal static class FunctionSourceBuilder
         switch (param.BindingType)
         {
             case ParameterBindingType.HttpRequest:
-            case ParameterBindingType.FunctionContext:
+            case ParameterBindingType.Context:
             case ParameterBindingType.CancellationToken:
             case ParameterBindingType.Logger:
                 return;
@@ -463,7 +463,7 @@ internal static class FunctionSourceBuilder
                     builder.AppendLine($"return new {BadRequestResultType}(\"Invalid request body.\");");
                 }
                 builder.EndBlock();
-                if (!IsNullableBodyParameter(param))
+                if (!param.IsNullableBodyParameter())
                 {
                     builder.AppendLine($"if ({pVar} is null)");
                     builder.BeginBlock();
@@ -900,7 +900,7 @@ internal static class FunctionSourceBuilder
                 case ParameterBindingType.HttpRequest:
                     argParts.Add("req");
                     break;
-                case ParameterBindingType.FunctionContext:
+                case ParameterBindingType.Context:
                     argParts.Add(hasFilter ? "ctx.FunctionContext" : "context");
                     break;
                 case ParameterBindingType.CancellationToken:
@@ -925,11 +925,6 @@ internal static class FunctionSourceBuilder
     {
         builder.AppendLine("var services = context.InstanceServices;");
         builder.AppendLine($"var target = {ActivatorUtilitiesType}.CreateInstance<{model.FunctionType.FullName}>(services);");
-    }
-
-    private static bool IsNullableBodyParameter(ParameterModel param)
-    {
-        return param.Type.IsNullable || (param.Type.IsReferenceType && param.Type.IsNullableReferenceType);
     }
 
     private static string ToPascalCase(string name)

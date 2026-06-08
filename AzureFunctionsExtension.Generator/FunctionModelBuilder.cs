@@ -474,7 +474,7 @@ internal static class FunctionModelBuilder
             }
             else if (typeName == FunctionContextFullName)
             {
-                bindingType = ParameterBindingType.FunctionContext;
+                bindingType = ParameterBindingType.Context;
                 converterMethod = string.Empty;
             }
             else if (typeName == CancellationTokenFullName)
@@ -529,7 +529,7 @@ internal static class FunctionModelBuilder
         return bindingType switch
         {
             ParameterBindingType.HttpRequest or
-            ParameterBindingType.FunctionContext or
+            ParameterBindingType.Context or
             ParameterBindingType.CancellationToken or
             ParameterBindingType.Logger or
             ParameterBindingType.FromServices or
