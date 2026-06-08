@@ -5,7 +5,7 @@ using AzureFunctionsExtension.Filters;
 
 using Xunit;
 
-public sealed class FunctionFilterTests
+public sealed class FilterPipelineTests
 {
     [Fact]
     public async Task Pipeline_SingleFilter_RunsAroundTerminal()
