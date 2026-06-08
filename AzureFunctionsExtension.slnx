@@ -23,5 +23,6 @@
   </Folder>
   <Folder Name="/Tests/">
     <Project Path="AzureFunctionsExtension.Tests\AzureFunctionsExtension.Tests.csproj" />
+    <Project Path="AzureFunctionsExtension.Example.Tests\AzureFunctionsExtension.Example.Tests.csproj" />
   </Folder>
 </Solution>

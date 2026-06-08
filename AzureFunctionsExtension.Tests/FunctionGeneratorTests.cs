@@ -317,6 +317,150 @@ public sealed class FunctionGeneratorTests
     }
 
     [Fact]
+    public void ReportsDiagnosticWhenClassIsNotPartial()
+    {
+        const string source = """
+            namespace TestFunctions;
+
+            using AzureFunctionsExtension.Annotations;
+            using Microsoft.AspNetCore.Mvc;
+
+            [AzureFunction]
+            public sealed class SampleFunction
+            {
+                [HttpEndpoint("get", "sample")]
+                public IActionResult Run() => new EmptyResult();
+            }
+            """;
+
+        var result = RunGenerator(source);
+
+        Assert.Contains(result.Diagnostics, static d => d.Id == "AFE0001");
+    }
+
+    [Fact]
+    public void ReportsDiagnosticWhenFilterTypeDoesNotImplementIFunctionFilter()
+    {
+        const string source = """
+            namespace TestFunctions;
+
+            using AzureFunctionsExtension.Annotations;
+            using Microsoft.AspNetCore.Mvc;
+
+            public sealed class NotAFilter
+            {
+            }
+
+            [AzureFunction]
+            [Filter<NotAFilter>]
+            public sealed partial class SampleFunction
+            {
+                [HttpEndpoint("get", "sample")]
+                public IActionResult Run() => new EmptyResult();
+            }
+            """;
+
+        var result = RunGenerator(source);
+
+        Assert.Contains(result.Diagnostics, static d => d.Id == "AFE0006");
+    }
+
+    [Fact]
+    public void ReportsDiagnosticWhenHandlerHasMultipleEndpointAttributes()
+    {
+        const string source = """
+            namespace TestFunctions;
+
+            using AzureFunctionsExtension.Annotations;
+            using Microsoft.AspNetCore.Mvc;
+
+            [AzureFunction]
+            public sealed partial class SampleFunction
+            {
+                [HttpEndpoint("get", "sample")]
+                [TimerEndpoint("0 */5 * * * *")]
+                public IActionResult Run() => new EmptyResult();
+            }
+            """;
+
+        var result = RunGenerator(source);
+
+        Assert.Contains(result.Diagnostics, static d => d.Id == "AFE0007");
+    }
+
+    [Fact]
+    public void ReportsDiagnosticWhenHttpOnlyBindingUsedOnNonHttpHandler()
+    {
+        const string source = """
+            namespace TestFunctions;
+
+            using AzureFunctionsExtension.Annotations;
+
+            [AzureFunction]
+            public sealed partial class SampleFunction
+            {
+                [QueueEndpoint("my-queue")]
+                public void Run([FromQuery] int id)
+                {
+                }
+            }
+            """;
+
+        var result = RunGenerator(source);
+
+        Assert.Contains(result.Diagnostics, static d => d.Id == "AFE0009");
+    }
+
+    [Fact]
+    public void DoesNotReportMultipleTriggerPayloadsForSingleTriggerHandler()
+    {
+        const string source = """
+            namespace TestFunctions;
+
+            using AzureFunctionsExtension.Annotations;
+
+            [AzureFunction]
+            public sealed partial class SampleFunction
+            {
+                [QueueEndpoint("my-queue")]
+                public void Run(string message)
+                {
+                }
+            }
+            """;
+
+        var result = RunGenerator(source);
+
+        Assert.DoesNotContain(result.Diagnostics, static d => d.Id == "AFE0010");
+    }
+
+    [Fact]
+    public void DoesNotReportMissingRouteParameterWhenRouteVariableIsBound()
+    {
+        const string source = """
+            namespace TestFunctions;
+
+            using AzureFunctionsExtension.Annotations;
+            using Microsoft.AspNetCore.Mvc;
+
+            [AzureFunction]
+            public sealed partial class SampleFunction
+            {
+                [HttpEndpoint("get", "items/{id}")]
+                public IActionResult Run([AzureFunctionsExtension.Annotations.FromRoute] int id)
+                {
+                    return new EmptyResult();
+                }
+            }
+            """;
+
+        var result = RunGenerator(source);
+
+        AssertNoGeneratorErrors(result);
+        Assert.DoesNotContain(result.Diagnostics, static d => d.Id == "AFE0013");
+    }
+
+    [Fact]
     public void GeneratesBadRequestHandlingForInvalidOrMissingRequestBody()
     {
         const string source = """
