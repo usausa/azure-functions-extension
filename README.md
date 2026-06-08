@@ -115,6 +115,26 @@ public sealed partial class SampleFunction
 | `[FromServices(key?)]` | parameter | Resolve the parameter from DI (`FunctionContext.InstanceServices`). With a key, resolves a keyed service. |
 | `[Filter<TFilter>(Order?)]` | class | Apply an `IFunctionFilter` around every handler in the class. |
 
+## Diagnostics
+
+The generator reports the following diagnostics.
+
+| ID | Severity | Phase | Description |
+|:---|:------:|:--------|:-----|
+| `AFE0001` | Error | Class definition | `[AzureFunction]` class is not `partial` |
+| `AFE0002` | Error | Class definition | `[AzureFunction]` class is generic |
+| `AFE0003` | Error | Class definition | `[AzureFunction]` class is a nested type |
+| `AFE0004` | Error | Class definition | `[AzureFunction]` applied to a record &mdash; not supported |
+| `AFE0005` | Error | Class definition | `[AzureFunction]` class is `abstract` |
+| `AFE0006` | Error | Filter | Filter type does not implement `IFunctionFilter` |
+| `AFE0007` | Error | Handler | Handler has multiple handler attributes |
+| `AFE0008` | Error | Handler | Overloaded handler name (function names must be unique) |
+| `AFE0009` | Error | Handler | HTTP-only binding attribute used on a non-HTTP handler |
+| `AFE0010` | Error | Handler | Timer/Queue handler has multiple trigger payload parameters |
+| `AFE0011` | Error | Parameter | Parameter has multiple binding attributes |
+| `AFE0012` | Error | Parameter | Parameter type is not supported by binding |
+| `AFE0013` | Warning | Route | Route template variable is not bound with `[FromRoute]` |
+
 ## HTTP binding
 
 ### Query

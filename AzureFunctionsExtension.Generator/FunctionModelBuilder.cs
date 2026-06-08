@@ -40,7 +40,7 @@ internal static class FunctionModelBuilder
     // Entry point: builds a FunctionModel from the class decorated with [AzureFunctionAttribute].
     public static Result<FunctionModel> BuildFunctionModel(GeneratorAttributeSyntaxContext context)
     {
-        var syntax = (ClassDeclarationSyntax)context.TargetNode;
+        var syntax = (TypeDeclarationSyntax)context.TargetNode;
         var symbol = (INamedTypeSymbol)context.TargetSymbol;
 
         // partial クラスでなければエラーを返す / Fail if the class is not partial
@@ -49,6 +49,32 @@ internal static class FunctionModelBuilder
         {
             return Results.Error<FunctionModel>(new DiagnosticInfo(
                 Diagnostics.NotPartialClass, syntax.GetLocation(), symbol.Name));
+        }
+
+        // 生成コードは名前空間直下に partial 型として出力されるため、クラス定義の前提条件を検証する
+        // The generated code is emitted as a partial type at namespace scope, so validate the class definition prerequisites
+        if (symbol.IsGenericType)
+        {
+            return Results.Error<FunctionModel>(new DiagnosticInfo(
+                Diagnostics.GenericClass, syntax.GetLocation(), symbol.Name));
+        }
+
+        if (symbol.ContainingType is not null)
+        {
+            return Results.Error<FunctionModel>(new DiagnosticInfo(
+                Diagnostics.NestedClass, syntax.GetLocation(), symbol.Name));
+        }
+
+        if (symbol.IsRecord)
+        {
+            return Results.Error<FunctionModel>(new DiagnosticInfo(
+                Diagnostics.RecordClass, syntax.GetLocation(), symbol.Name));
+        }
+
+        if (symbol.IsAbstract)
+        {
+            return Results.Error<FunctionModel>(new DiagnosticInfo(
+                Diagnostics.AbstractClass, syntax.GetLocation(), symbol.Name));
         }
 
         // 名前空間・クラス型参照を取得する / Resolve namespace and type reference
@@ -92,6 +118,7 @@ internal static class FunctionModelBuilder
         // クラスの各メソッドを走査してハンドラーモデルを構築する
         // Iterate class members to build handler models
         var handlers = new List<HandlerModel>();
+        var handlerNames = new HashSet<string>(StringComparer.Ordinal);
         foreach (var member in symbol.GetMembers().OfType<IMethodSymbol>())
         {
             if ((member.MethodKind != MethodKind.Ordinary) || member.IsStatic)
@@ -108,6 +135,15 @@ internal static class FunctionModelBuilder
                 }
 
                 continue;
+            }
+
+            // ハンドラー名 (= 生成される [Function] 名) は一意でなければならない。オーバーロードはエラー
+            // Handler names (= generated [Function] names) must be unique; overloads are an error
+            if (!handlerNames.Add(handlerResult.MethodName))
+            {
+                var loc = member.Locations.Length > 0 ? member.Locations[0] : null;
+                return Results.Error<FunctionModel>(new DiagnosticInfo(
+                    Diagnostics.OverloadedHandler, loc, handlerResult.MethodName));
             }
 
             handlers.Add(handlerResult);
@@ -254,6 +290,19 @@ internal static class FunctionModelBuilder
             }
 
             parameters.Add(paramModel);
+        }
+
+        // Timer/Queue ハンドラーのトリガーペイロードは 1 つまで。複数あるとバインド先が曖昧になるためエラー
+        // A Timer/Queue handler may bind at most one trigger payload; multiple would be ambiguous, so it is an error
+        if (kind != HandlerKind.Http)
+        {
+            var triggerCount = parameters.Count(static p => p.BindingKind == ParameterBindingKind.FromTrigger);
+            if (triggerCount > 1)
+            {
+                var loc = method.Locations.Length > 0 ? method.Locations[0] : null;
+                diagnostics.Add(new DiagnosticInfo(Diagnostics.MultipleTriggerPayloads, loc, method.Name));
+                return null;
+            }
         }
 
         if (kind == HandlerKind.Http)

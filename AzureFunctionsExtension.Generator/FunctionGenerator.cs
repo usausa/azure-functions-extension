@@ -21,7 +21,7 @@ public sealed class FunctionGenerator : IIncrementalGenerator
         var provider = context.SyntaxProvider
             .ForAttributeWithMetadataName(
                 AzureFunctionAttributeFullName,
-                static (syntax, _) => syntax is ClassDeclarationSyntax,
+                static (syntax, _) => syntax is ClassDeclarationSyntax or RecordDeclarationSyntax,
                 static (ctx, _) => FunctionModelBuilder.BuildFunctionModel(ctx))
             .Collect();
 
