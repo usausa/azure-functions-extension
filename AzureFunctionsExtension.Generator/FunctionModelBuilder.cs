@@ -387,6 +387,14 @@ internal static class FunctionModelBuilder
             {
                 bindingAttrCount++;
                 bindingKind = ParameterBindingKind.FromServices;
+                // [FromServices] のキーは未指定時 empty とし、keyed service 解決の有無を区別する
+                // For [FromServices] the key defaults to empty so keyed vs. non-keyed resolution can be distinguished
+                key = string.Empty;
+                var nameArg = attr.ConstructorArguments.Length > 0 ? attr.ConstructorArguments[0].Value as string : null;
+                if (!String.IsNullOrEmpty(nameArg))
+                {
+                    key = nameArg!;
+                }
             }
             else if (attrName == FromTriggerAttributeName)
             {

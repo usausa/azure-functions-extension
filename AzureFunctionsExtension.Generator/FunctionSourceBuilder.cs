@@ -30,6 +30,7 @@ internal static class FunctionSourceBuilder
     private const string JsonExceptionType = "global::System.Text.Json.JsonException";
     private const string StringConverterType = "global::AzureFunctionsExtension.Binders.StringConverter";
     private const string GetRequiredService = "global::Microsoft.Extensions.DependencyInjection.ServiceProviderServiceExtensions.GetRequiredService";
+    private const string GetRequiredKeyedService = "global::Microsoft.Extensions.DependencyInjection.ServiceProviderKeyedServiceExtensions.GetRequiredKeyedService";
     private const string GetService = "global::Microsoft.Extensions.DependencyInjection.ServiceProviderServiceExtensions.GetService";
     private const string ActivatorUtilitiesType = "global::Microsoft.Extensions.DependencyInjection.ActivatorUtilities";
     private const string GetLoggerMethod = "global::Microsoft.Azure.Functions.Worker.FunctionContextLoggerExtensions.GetLogger";
@@ -390,11 +391,18 @@ internal static class FunctionSourceBuilder
             var p = parameters[i];
             if (p.BindingKind == ParameterBindingKind.FromServices)
             {
-                builder.AppendLine($"var p{i} = {GetRequiredService}<{p.Type.FullName}>(services);");
+                builder.AppendLine($"var p{i} = {ResolveServiceExpression(p.Type.FullName, p.Key)};");
                 builder.NewLine();
             }
         }
     }
+
+    // [FromServices] のキー指定有無に応じて非キー付き／キー付き DI 解決式を生成する。
+    // Builds a non-keyed or keyed DI resolution expression depending on the [FromServices] key.
+    private static string ResolveServiceExpression(string typeName, string key) =>
+        String.IsNullOrEmpty(key)
+            ? $"{GetRequiredService}<{typeName}>(services)"
+            : $"{GetRequiredKeyedService}<{typeName}>(services, \"{key}\")";
 
     // キューハンドラーで FromServices パラメータのみ DI から解決するコードを出力する。
     // Emits DI resolution code only for FromServices parameters in a Queue handler.
@@ -406,7 +414,7 @@ internal static class FunctionSourceBuilder
             var p = parameters[i];
             if (p.BindingKind == ParameterBindingKind.FromServices)
             {
-                builder.AppendLine($"var p{i} = {GetRequiredService}<{p.Type.FullName}>(services);");
+                builder.AppendLine($"var p{i} = {ResolveServiceExpression(p.Type.FullName, p.Key)};");
                 builder.NewLine();
             }
         }
@@ -433,7 +441,7 @@ internal static class FunctionSourceBuilder
             case ParameterBindingKind.Logger:
                 return;
             case ParameterBindingKind.FromServices:
-                builder.AppendLine($"var {pVar} = {GetRequiredService}<{typeName}>(services);");
+                builder.AppendLine($"var {pVar} = {ResolveServiceExpression(typeName, param.Key)};");
                 builder.NewLine();
                 return;
             case ParameterBindingKind.FromBody:

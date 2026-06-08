@@ -67,6 +67,37 @@ public sealed class FunctionGeneratorTests
     }
 
     [Fact]
+    public void GeneratesKeyedServiceResolutionWhenFromServicesHasKey()
+    {
+        const string source = """
+            namespace TestFunctions;
+
+            using AzureFunctionsExtension.Annotations;
+            using Microsoft.AspNetCore.Mvc;
+
+            public interface IClock
+            {
+            }
+
+            [AzureFunction]
+            public sealed partial class SampleFunction
+            {
+                [HttpEndpoint("get", "sample")]
+                public IActionResult Run([AzureFunctionsExtension.Annotations.FromServices("primary")] IClock clock)
+                {
+                    _ = clock;
+                    return new EmptyResult();
+                }
+            }
+            """;
+
+        var result = RunGenerator(source);
+
+        AssertNoGeneratorErrors(result);
+        Assert.Contains("GetRequiredKeyedService<global::TestFunctions.IClock>(services, \"primary\")", result.GeneratedCode, StringComparison.Ordinal);
+    }
+
+    [Fact]
     public void ReportsDiagnosticWhenMultipleBindingAttributesAreApplied()
     {
         const string source = """

@@ -112,7 +112,7 @@ public sealed partial class SampleFunction
 | `[FromHeader(name?)]` | parameter | Bind from an HTTP header. |
 | `[FromBody(SkipValidate?)]` | parameter | Deserialize the JSON body. Validated with DataAnnotations unless `SkipValidate = true`. |
 | `[FromTrigger]` | parameter | Bind the raw trigger payload (queue message, `TimerInfo`, ...). |
-| `[FromServices]` | parameter | Resolve the parameter from DI (`FunctionContext.InstanceServices`). |
+| `[FromServices(key?)]` | parameter | Resolve the parameter from DI (`FunctionContext.InstanceServices`). With a key, resolves a keyed service. |
 | `[Filter<TFilter>(Order?)]` | class | Apply an `IFunctionFilter` around every handler in the class. |
 
 ## HTTP binding
@@ -228,6 +228,7 @@ DI uses the standard Azure Functions / .NET container &mdash; there is no custom
 * Inject services into a handler parameter with `[FromServices]`.
 
 Dependencies are resolved from `FunctionContext.InstanceServices`.
+`[FromServices("key")]` resolves a keyed service (`GetRequiredKeyedService`); without a key it resolves the default service (`GetRequiredService`).
 
 ```csharp
 [HttpEndpoint("post", "greet", AuthorizationLevel.Anonymous)]
