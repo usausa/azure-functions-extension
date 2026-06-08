@@ -127,10 +127,10 @@ The generator reports the following diagnostics.
 | `AFE0004` | Error | Class definition | `[AzureFunction]` applied to a record &mdash; not supported |
 | `AFE0005` | Error | Class definition | `[AzureFunction]` class is `abstract` |
 | `AFE0006` | Error | Filter | Filter type does not implement `IFunctionFilter` |
-| `AFE0007` | Error | Handler | Handler has multiple handler attributes |
-| `AFE0008` | Error | Handler | Overloaded handler name (function names must be unique) |
-| `AFE0009` | Error | Handler | HTTP-only binding attribute used on a non-HTTP handler |
-| `AFE0010` | Error | Handler | Timer/Queue handler has multiple trigger payload parameters |
+| `AFE0007` | Error | Function | Function has multiple endpoint attributes |
+| `AFE0008` | Error | Function | Overloaded function name (function names must be unique) |
+| `AFE0009` | Error | Function | HTTP-only binding attribute used on a non-HTTP function |
+| `AFE0010` | Error | Function | Timer/Queue function has multiple trigger payload parameters |
 | `AFE0011` | Error | Parameter | Parameter has multiple binding attributes |
 | `AFE0012` | Error | Parameter | Parameter type is not supported by binding |
 | `AFE0013` | Warning | Route | Route template variable is not bound with `[FromRoute]` |
