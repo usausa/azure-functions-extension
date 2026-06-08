@@ -1,10 +1,9 @@
 namespace AzureFunctionsExtension.Tests;
 
-using Xunit;
+using System.Globalization;
 
 using static AzureFunctionsExtension.Tests.CompilationHelper;
 
-// FunctionGenerator が出力する生成コードの内容を機能ごとに検証するテスト。
 public sealed class GeneratorTests
 {
     // ---------------------------------------------------------------------------
@@ -14,7 +13,8 @@ public sealed class GeneratorTests
     [Fact]
     public void GeneratesWrappersUsingFunctionContextServicesAndCancellationToken()
     {
-        const string source = """
+        const string source =
+            """
             namespace TestFunctions;
 
             using System.Threading;
@@ -60,7 +60,8 @@ public sealed class GeneratorTests
     [Fact]
     public void GeneratesKeyedServiceResolutionWhenFromServicesHasKey()
     {
-        const string source = """
+        const string source =
+            """
             namespace TestFunctions;
 
             using AzureFunctionsExtension.Annotations;
@@ -95,7 +96,8 @@ public sealed class GeneratorTests
     [Fact]
     public void GeneratesExceptionLoggingInHttpHandler()
     {
-        const string source = """
+        const string source =
+            """
             namespace TestFunctions;
 
             using AzureFunctionsExtension.Annotations;
@@ -123,7 +125,8 @@ public sealed class GeneratorTests
     [Fact]
     public void GeneratesTimerHandlerWithExceptionLogging()
     {
-        const string source = """
+        const string source =
+            """
             namespace TestFunctions;
 
             using AzureFunctionsExtension.Annotations;
@@ -151,7 +154,8 @@ public sealed class GeneratorTests
     [Fact]
     public void GeneratesQueueHandlerWithExceptionLogging()
     {
-        const string source = """
+        const string source =
+            """
             namespace TestFunctions;
 
             using AzureFunctionsExtension.Annotations;
@@ -183,7 +187,8 @@ public sealed class GeneratorTests
     [Fact]
     public void ReturnsActionResultWithoutWrapping()
     {
-        const string source = """
+        const string source =
+            """
             namespace TestFunctions;
 
             using AzureFunctionsExtension.Annotations;
@@ -210,7 +215,8 @@ public sealed class GeneratorTests
     [Fact]
     public void WrapsNonActionResultReturnValueWithResultsOk()
     {
-        const string source = """
+        const string source =
+            """
             namespace TestFunctions;
 
             using AzureFunctionsExtension.Annotations;
@@ -236,7 +242,8 @@ public sealed class GeneratorTests
     [Fact]
     public void WrapsVoidHttpHandlerWithResultsOk()
     {
-        const string source = """
+        const string source =
+            """
             namespace TestFunctions;
 
             using AzureFunctionsExtension.Annotations;
@@ -265,7 +272,8 @@ public sealed class GeneratorTests
     [Fact]
     public void GeneratesStringConverterCallForIntQueryParameter()
     {
-        const string source = """
+        const string source =
+            """
             namespace TestFunctions;
 
             using AzureFunctionsExtension.Annotations;
@@ -294,7 +302,8 @@ public sealed class GeneratorTests
     [Fact]
     public void GeneratesStringConverterCallForGuidRouteParameter()
     {
-        const string source = """
+        const string source =
+            """
             namespace TestFunctions;
 
             using System;
@@ -323,7 +332,8 @@ public sealed class GeneratorTests
     [Fact]
     public void GeneratesArrayBindingForQueryParameter()
     {
-        const string source = """
+        const string source =
+            """
             namespace TestFunctions;
 
             using AzureFunctionsExtension.Annotations;
@@ -355,7 +365,8 @@ public sealed class GeneratorTests
     [Fact]
     public void BindsNullableQueryParameterDefaultValue()
     {
-        const string source = """
+        const string source =
+            """
             namespace TestFunctions;
 
             using AzureFunctionsExtension.Annotations;
@@ -382,7 +393,8 @@ public sealed class GeneratorTests
     [Fact]
     public void BindsNullableRouteParameterDefaultValue()
     {
-        const string source = """
+        const string source =
+            """
             namespace TestFunctions;
 
             using System;
@@ -410,7 +422,8 @@ public sealed class GeneratorTests
     [Fact]
     public void BindsNullableHeaderParameterDefaultValue()
     {
-        const string source = """
+        const string source =
+            """
             namespace TestFunctions;
 
             using AzureFunctionsExtension.Annotations;
@@ -437,7 +450,8 @@ public sealed class GeneratorTests
     [Fact]
     public void BindsEnumQueryParameterDefaultValue()
     {
-        const string source = """
+        const string source =
+            """
             namespace TestFunctions;
 
             using AzureFunctionsExtension.Annotations;
@@ -470,7 +484,8 @@ public sealed class GeneratorTests
     [Fact]
     public void BindsNullableEnumHeaderParameterDefaultValue()
     {
-        const string source = """
+        const string source =
+            """
             namespace TestFunctions;
 
             using AzureFunctionsExtension.Annotations;
@@ -503,7 +518,8 @@ public sealed class GeneratorTests
     [Fact]
     public void EscapesStringDefaultValueLiteral()
     {
-        const string source = """
+        const string source =
+            """
             namespace TestFunctions;
 
             using AzureFunctionsExtension.Annotations;
@@ -529,7 +545,8 @@ public sealed class GeneratorTests
     [Fact]
     public void FormatsNumericDefaultValueUsingInvariantCulture()
     {
-        const string source = """
+        const string source =
+            """
             namespace TestFunctions;
 
             using AzureFunctionsExtension.Annotations;
@@ -566,7 +583,8 @@ public sealed class GeneratorTests
     [Fact]
     public void PreservesBadRequestForNullableDefaultWithFilter()
     {
-        const string source = """
+        const string source =
+            """
             namespace TestFunctions;
 
             using AzureFunctionsExtension.Annotations;
@@ -606,7 +624,8 @@ public sealed class GeneratorTests
     [Fact]
     public void GeneratesBadRequestHandlingForInvalidOrMissingRequestBody()
     {
-        const string source = """
+        const string source =
+            """
             namespace TestFunctions;
 
             using AzureFunctionsExtension.Annotations;
@@ -642,7 +661,8 @@ public sealed class GeneratorTests
     [Fact]
     public void GeneratesHttpHandlerWithFilterPipeline()
     {
-        const string source = """
+        const string source =
+            """
             namespace TestFunctions;
 
             using AzureFunctionsExtension.Annotations;

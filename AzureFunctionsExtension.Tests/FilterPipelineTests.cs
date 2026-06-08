@@ -3,8 +3,6 @@ namespace AzureFunctionsExtension.Tests;
 
 using AzureFunctionsExtension.Filters;
 
-using Xunit;
-
 public sealed class FilterPipelineTests
 {
     [Fact]

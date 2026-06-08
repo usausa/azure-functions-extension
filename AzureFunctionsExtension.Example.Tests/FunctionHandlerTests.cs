@@ -6,7 +6,6 @@ using Microsoft.Extensions.Primitives;
 
 public sealed class FunctionHandlerTests
 {
-    // [FromQuery] — scalar + nullable + default value
     [Fact]
     public async Task Query_Handler_ValidValues_Returns200WithSum()
     {
@@ -36,7 +35,6 @@ public sealed class FunctionHandlerTests
         Assert.Equal(400, HandlerTestHost.StatusOf(result));
     }
 
-    // [FromQuery] — arrays (comma separated)
     [Fact]
     public async Task Array_Handler_Returns200WithSum()
     {
@@ -53,7 +51,6 @@ public sealed class FunctionHandlerTests
         Assert.Equal(15, body.Result); // (1+2+3) + (4+5)
     }
 
-    // [FromBody] — DataAnnotations validation
     [Fact]
     public async Task Body_Handler_ValidBody_Returns200()
     {
@@ -93,7 +90,6 @@ public sealed class FunctionHandlerTests
         Assert.Equal(400, HandlerTestHost.StatusOf(result));
     }
 
-    // [FromRoute] — path parameter + Results.NotFound / Results.Ok
     [Fact]
     public async Task GetItem_Handler_ExistingId_Returns200()
     {
@@ -136,7 +132,6 @@ public sealed class FunctionHandlerTests
         Assert.Equal(400, HandlerTestHost.StatusOf(result));
     }
 
-    // [FromHeader] — custom header binding
     [Fact]
     public async Task HeaderEcho_Handler_Returns200()
     {
@@ -150,7 +145,6 @@ public sealed class FunctionHandlerTests
         Assert.Equal(200, HandlerTestHost.StatusOf(result));
     }
 
-    // ApiException — short-circuits with a specific status code
     [Fact]
     public async Task Lookup_Handler_UnknownName_Returns404()
     {
@@ -177,7 +171,6 @@ public sealed class FunctionHandlerTests
         Assert.Equal(200, HandlerTestHost.StatusOf(result));
     }
 
-    // async Task<IActionResult> + [FromServices] + [FromBody(SkipValidate = true)]
     [Fact]
     public async Task Greet_Handler_ResolvesServiceAndReturns200()
     {

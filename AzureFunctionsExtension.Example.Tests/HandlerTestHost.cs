@@ -12,8 +12,6 @@ using Microsoft.Azure.Functions.Worker;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Primitives;
 
-// Builds the DI container and HTTP request fakes needed to drive the generated handlers,
-// mirroring the registrations in the example's Program.cs.
 internal static class HandlerTestHost
 {
     public static IServiceProvider CreateServices()
@@ -73,7 +71,6 @@ internal static class HandlerTestHost
         return request;
     }
 
-    // Extracts the HTTP status code from the IActionResult shapes the generator emits.
     public static int? StatusOf(IActionResult result) => result switch
     {
         global::AzureFunctionsExtension.Mvc.SystemTextJsonResult r => r.StatusCode,

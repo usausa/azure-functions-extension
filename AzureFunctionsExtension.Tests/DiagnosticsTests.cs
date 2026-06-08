@@ -1,7 +1,5 @@
 namespace AzureFunctionsExtension.Tests;
 
-using Xunit;
-
 using static AzureFunctionsExtension.Tests.CompilationHelper;
 
 // FunctionGenerator の診断（AFE0001〜AFE0013）の発生条件を、対象 ID 順に検証するテスト。
@@ -11,7 +9,8 @@ public sealed class DiagnosticsTests
     [Fact]
     public void ReportsDiagnosticWhenClassIsNotPartial()
     {
-        const string source = """
+        const string source =
+            """
             namespace TestFunctions;
 
             using AzureFunctionsExtension.Annotations;
@@ -34,7 +33,8 @@ public sealed class DiagnosticsTests
     [Fact]
     public void ReportsDiagnosticWhenClassIsGeneric()
     {
-        const string source = """
+        const string source =
+            """
             namespace TestFunctions;
 
             using AzureFunctionsExtension.Annotations;
@@ -57,7 +57,8 @@ public sealed class DiagnosticsTests
     [Fact]
     public void ReportsDiagnosticWhenClassIsNested()
     {
-        const string source = """
+        const string source =
+            """
             namespace TestFunctions;
 
             using AzureFunctionsExtension.Annotations;
@@ -83,7 +84,8 @@ public sealed class DiagnosticsTests
     [Fact]
     public void ReportsDiagnosticWhenTypeIsRecord()
     {
-        const string source = """
+        const string source =
+            """
             namespace TestFunctions;
 
             using AzureFunctionsExtension.Annotations;
@@ -106,7 +108,8 @@ public sealed class DiagnosticsTests
     [Fact]
     public void ReportsDiagnosticWhenClassIsAbstract()
     {
-        const string source = """
+        const string source =
+            """
             namespace TestFunctions;
 
             using AzureFunctionsExtension.Annotations;
@@ -129,7 +132,8 @@ public sealed class DiagnosticsTests
     [Fact]
     public void ReportsDiagnosticWhenFilterTypeDoesNotImplementIFunctionFilter()
     {
-        const string source = """
+        const string source =
+            """
             namespace TestFunctions;
 
             using AzureFunctionsExtension.Annotations;
@@ -157,7 +161,8 @@ public sealed class DiagnosticsTests
     [Fact]
     public void ReportsDiagnosticWhenHandlerHasMultipleEndpointAttributes()
     {
-        const string source = """
+        const string source =
+            """
             namespace TestFunctions;
 
             using AzureFunctionsExtension.Annotations;
@@ -181,7 +186,8 @@ public sealed class DiagnosticsTests
     [Fact]
     public void ReportsDiagnosticWhenHandlerIsOverloaded()
     {
-        const string source = """
+        const string source =
+            """
             namespace TestFunctions;
 
             using AzureFunctionsExtension.Annotations;
@@ -207,7 +213,8 @@ public sealed class DiagnosticsTests
     [Fact]
     public void ReportsDiagnosticWhenHttpOnlyBindingUsedOnNonHttpHandler()
     {
-        const string source = """
+        const string source =
+            """
             namespace TestFunctions;
 
             using AzureFunctionsExtension.Annotations;
@@ -231,7 +238,8 @@ public sealed class DiagnosticsTests
     [Fact]
     public void ReportsDiagnosticWhenQueueHandlerHasMultipleTriggerPayloads()
     {
-        const string source = """
+        const string source =
+            """
             namespace TestFunctions;
 
             using AzureFunctionsExtension.Annotations;
@@ -254,7 +262,8 @@ public sealed class DiagnosticsTests
     [Fact]
     public void DoesNotReportMultipleTriggerPayloadsForSingleTriggerHandler()
     {
-        const string source = """
+        const string source =
+            """
             namespace TestFunctions;
 
             using AzureFunctionsExtension.Annotations;
@@ -278,7 +287,8 @@ public sealed class DiagnosticsTests
     [Fact]
     public void ReportsDiagnosticWhenMultipleBindingAttributesAreApplied()
     {
-        const string source = """
+        const string source =
+            """
             namespace TestFunctions;
 
             using AzureFunctionsExtension.Annotations;
@@ -304,7 +314,8 @@ public sealed class DiagnosticsTests
     [Fact]
     public void ReportsDiagnosticWhenTextBindingTypeIsUnsupported()
     {
-        const string source = """
+        const string source =
+            """
             namespace TestFunctions;
 
             using AzureFunctionsExtension.Annotations;
@@ -335,7 +346,8 @@ public sealed class DiagnosticsTests
     [Fact]
     public void ReportsDiagnosticWhenRouteParameterIsNotBound()
     {
-        const string source = """
+        const string source =
+            """
             namespace TestFunctions;
 
             using AzureFunctionsExtension.Annotations;
@@ -360,7 +372,8 @@ public sealed class DiagnosticsTests
     [Fact]
     public void DoesNotReportMissingRouteParameterWhenRouteVariableIsBound()
     {
-        const string source = """
+        const string source =
+            """
             namespace TestFunctions;
 
             using AzureFunctionsExtension.Annotations;

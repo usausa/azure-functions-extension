@@ -6,9 +6,6 @@ using System.Threading;
 
 using Microsoft.Azure.Functions.Worker;
 
-// Minimal FunctionContext used to invoke generated handlers in tests.
-// Only InstanceServices / CancellationToken / Items are exercised by the generated code;
-// the remaining members throw to surface any unexpected usage.
 internal sealed class FakeFunctionContext : FunctionContext
 {
     public FakeFunctionContext(IServiceProvider instanceServices)

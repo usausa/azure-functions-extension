@@ -11,8 +11,7 @@ using Microsoft.Azure.Functions.Worker;
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp;
 using Microsoft.Extensions.DependencyInjection;
-
-using Xunit;
+using Microsoft.Extensions.Logging;
 
 internal static class CompilationHelper
 {

@@ -2,7 +2,6 @@ namespace AzureFunctionsExtension.Example.Tests;
 
 public sealed class FilterFunctionHandlerTests
 {
-    // [Filter<LoggingFilter>] pipeline wraps the handler and the result flows back through ctx.Result.
     [Fact]
     public async Task Ping_Handler_RunsThroughFilterPipelineAndReturns200()
     {
