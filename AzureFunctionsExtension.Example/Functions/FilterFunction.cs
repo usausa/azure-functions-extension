@@ -1,14 +1,14 @@
-namespace AzureFunctionsExtension.Example;
+namespace AzureFunctionsExtension.Example.Functions;
 
 using AzureFunctionsExtension;
 using AzureFunctionsExtension.Annotations;
+using AzureFunctionsExtension.Example.Filters;
 
 using Microsoft.Azure.Functions.Worker;
 using Microsoft.Extensions.Logging;
 
 using IActionResult = Microsoft.AspNetCore.Mvc.IActionResult;
 
-// Demonstrates [Filter<T>] filter pipeline applied to all handlers in the class.
 [AzureFunction]
 [Filter<LoggingFilter>(Order = 0)]
 internal sealed partial class FilterFunction

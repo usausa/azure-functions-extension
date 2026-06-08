@@ -1,4 +1,4 @@
-namespace AzureFunctionsExtension.Example;
+namespace AzureFunctionsExtension.Example.Filters;
 
 using AzureFunctionsExtension.Filters;
 
@@ -12,9 +12,9 @@ internal sealed class LoggingFilter : IFunctionFilter
 
     public async ValueTask InvokeAsync(FunctionInvocationContext context, FunctionFilterDelegate next)
     {
-        var start = System.Diagnostics.Stopwatch.GetTimestamp();
+        var start = Stopwatch.GetTimestamp();
         await next(context).ConfigureAwait(false);
-        var elapsed = System.Diagnostics.Stopwatch.GetElapsedTime(start);
+        var elapsed = Stopwatch.GetElapsedTime(start);
         HandlerCompleted(context.FunctionContext.GetLogger(nameof(LoggingFilter)), elapsed.TotalMilliseconds, null);
     }
 }

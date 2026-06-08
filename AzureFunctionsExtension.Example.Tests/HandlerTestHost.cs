@@ -5,6 +5,10 @@ using System.IO;
 using System.Text;
 using System.Text.Json;
 
+using AzureFunctionsExtension.Example.Filters;
+using AzureFunctionsExtension.Example.Functions;
+using AzureFunctionsExtension.Example.Services;
+
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Routing;
@@ -20,7 +24,7 @@ internal static class HandlerTestHost
         services.AddLogging();
         services.AddAzureFunctionExtension();
         services.AddSingleton<IGreetingService, GreetingService>();
-        services.AddTransient<Function>();
+        services.AddTransient<HttpFunction>();
         services.AddTransient<QueueFunction>();
         services.AddTransient<FilterFunction>();
         services.AddTransient<LoggingFilter>();

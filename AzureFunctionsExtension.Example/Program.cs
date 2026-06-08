@@ -1,5 +1,7 @@
 using AzureFunctionsExtension;
-using AzureFunctionsExtension.Example;
+using AzureFunctionsExtension.Example.Filters;
+using AzureFunctionsExtension.Example.Functions;
+using AzureFunctionsExtension.Example.Services;
 
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
@@ -12,7 +14,7 @@ var host = new HostBuilder()
     {
         services.AddAzureFunctionExtension();
         services.AddSingleton<IGreetingService, GreetingService>();
-        services.AddTransient<Function>();
+        services.AddTransient<HttpFunction>();
         services.AddTransient<QueueFunction>();
         services.AddTransient<FilterFunction>();
         services.AddTransient<LoggingFilter>();
@@ -25,7 +27,7 @@ static void KeepExampleTypesAlive()
 {
     _ = new GreetingService();
     _ = new LoggingFilter();
-    _ = new Function(null!);
+    _ = new HttpFunction(null!);
     _ = new QueueFunction(null!);
     _ = new FilterFunction(null!);
 }

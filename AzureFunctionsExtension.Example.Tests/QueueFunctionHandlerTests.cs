@@ -1,5 +1,7 @@
 namespace AzureFunctionsExtension.Example.Tests;
 
+using AzureFunctionsExtension.Example.Functions;
+
 public sealed class QueueFunctionHandlerTests
 {
     // [QueueEndpoint] + [FromTrigger] message + [FromServices] injection

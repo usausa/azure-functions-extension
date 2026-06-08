@@ -1,7 +1,9 @@
-namespace AzureFunctionsExtension.Example;
+namespace AzureFunctionsExtension.Example.Functions;
 
 using AzureFunctionsExtension;
 using AzureFunctionsExtension.Annotations;
+using AzureFunctionsExtension.Example.Models;
+using AzureFunctionsExtension.Example.Services;
 
 using Microsoft.Azure.Functions.Worker;
 using Microsoft.Extensions.Logging;
@@ -9,7 +11,7 @@ using Microsoft.Extensions.Logging;
 using IActionResult = Microsoft.AspNetCore.Mvc.IActionResult;
 
 [AzureFunction]
-internal sealed partial class Function
+internal sealed partial class HttpFunction
 {
     private static readonly Action<ILogger, int, int?, int, Exception?> QueryRequest =
         LoggerMessage.Define<int, int?, int>(LogLevel.Information, new EventId(1, nameof(Query)), "Query request. a=[{A}], b=[{B}], c=[{C}]");
@@ -35,9 +37,9 @@ internal sealed partial class Function
     private static readonly Action<ILogger, string, Exception?> GreetLog =
         LoggerMessage.Define<string>(LogLevel.Information, new EventId(8, nameof(Greet)), "Greet request. name=[{Name}]");
 
-    private readonly ILogger<Function> log;
+    private readonly ILogger<HttpFunction> log;
 
-    public Function(ILogger<Function> log)
+    public HttpFunction(ILogger<HttpFunction> log)
     {
         this.log = log;
     }

@@ -13,3 +13,7 @@ global using System.Threading;
 global using System.Threading.Tasks;
 
 global using Microsoft.Extensions.Logging;
+
+global using AzureFunctionsExtension.Example.Filters;
+global using AzureFunctionsExtension.Example.Models;
+global using AzureFunctionsExtension.Example.Services;

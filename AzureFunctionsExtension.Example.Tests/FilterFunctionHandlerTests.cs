@@ -1,5 +1,7 @@
 namespace AzureFunctionsExtension.Example.Tests;
 
+using AzureFunctionsExtension.Example.Functions;
+
 public sealed class FilterFunctionHandlerTests
 {
     [Fact]

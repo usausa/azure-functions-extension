@@ -1,4 +1,4 @@
-namespace AzureFunctionsExtension.Example;
+namespace AzureFunctionsExtension.Example.Services;
 
 internal interface IGreetingService
 {

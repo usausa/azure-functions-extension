@@ -1,6 +1,7 @@
-namespace AzureFunctionsExtension.Example;
+namespace AzureFunctionsExtension.Example.Functions;
 
 using AzureFunctionsExtension.Annotations;
+using AzureFunctionsExtension.Example.Services;
 
 using Microsoft.Extensions.Logging;
 

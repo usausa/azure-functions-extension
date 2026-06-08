@@ -2,9 +2,12 @@ namespace AzureFunctionsExtension.Example.Tests;
 
 using System.Collections.Generic;
 
+using AzureFunctionsExtension.Example.Functions;
+using AzureFunctionsExtension.Example.Models;
+
 using Microsoft.Extensions.Primitives;
 
-public sealed class FunctionHandlerTests
+public sealed class HttpFunctionHandlerTests
 {
     [Fact]
     public async Task Query_Handler_ValidValues_Returns200WithSum()
@@ -14,7 +17,7 @@ public sealed class FunctionHandlerTests
             services,
             query: new Dictionary<string, StringValues> { ["a"] = "1", ["b"] = "2" });
 
-        var result = await Function.Query_Handler(req, HandlerTestHost.CreateContext(services));
+        var result = await HttpFunction.Query_Handler(req, HandlerTestHost.CreateContext(services));
 
         Assert.Equal(200, HandlerTestHost.StatusOf(result));
         var body = HandlerTestHost.ValueOf<QueryResponse>(result);
@@ -30,7 +33,7 @@ public sealed class FunctionHandlerTests
             services,
             query: new Dictionary<string, StringValues> { ["a"] = "notanumber" });
 
-        var result = await Function.Query_Handler(req, HandlerTestHost.CreateContext(services));
+        var result = await HttpFunction.Query_Handler(req, HandlerTestHost.CreateContext(services));
 
         Assert.Equal(400, HandlerTestHost.StatusOf(result));
     }
@@ -43,7 +46,7 @@ public sealed class FunctionHandlerTests
             services,
             query: new Dictionary<string, StringValues> { ["a"] = "1,2,3", ["b"] = "4,5" });
 
-        var result = await Function.Array_Handler(req, HandlerTestHost.CreateContext(services));
+        var result = await HttpFunction.Array_Handler(req, HandlerTestHost.CreateContext(services));
 
         Assert.Equal(200, HandlerTestHost.StatusOf(result));
         var body = HandlerTestHost.ValueOf<QueryResponse>(result);
@@ -58,7 +61,7 @@ public sealed class FunctionHandlerTests
         var json = HandlerTestHost.Json(new { id = 1, name = "widget", flag = true, dateTime = "2024-01-15T00:00:00" });
         var req = HandlerTestHost.CreateRequest(services, body: json);
 
-        var result = await Function.Body_Handler(req, HandlerTestHost.CreateContext(services));
+        var result = await HttpFunction.Body_Handler(req, HandlerTestHost.CreateContext(services));
 
         Assert.Equal(200, HandlerTestHost.StatusOf(result));
         var body = HandlerTestHost.ValueOf<BodyResponse>(result);
@@ -74,7 +77,7 @@ public sealed class FunctionHandlerTests
         var json = HandlerTestHost.Json(new { id = 1, name = string.Empty }); // name is [Required]
         var req = HandlerTestHost.CreateRequest(services, body: json);
 
-        var result = await Function.Body_Handler(req, HandlerTestHost.CreateContext(services));
+        var result = await HttpFunction.Body_Handler(req, HandlerTestHost.CreateContext(services));
 
         Assert.Equal(400, HandlerTestHost.StatusOf(result));
     }
@@ -85,7 +88,7 @@ public sealed class FunctionHandlerTests
         var services = HandlerTestHost.CreateServices();
         var req = HandlerTestHost.CreateRequest(services, body: "{ this is not json");
 
-        var result = await Function.Body_Handler(req, HandlerTestHost.CreateContext(services));
+        var result = await HttpFunction.Body_Handler(req, HandlerTestHost.CreateContext(services));
 
         Assert.Equal(400, HandlerTestHost.StatusOf(result));
     }
@@ -98,7 +101,7 @@ public sealed class FunctionHandlerTests
             services,
             route: new Dictionary<string, object?> { ["id"] = "5" });
 
-        var result = await Function.GetItem_Handler(req, HandlerTestHost.CreateContext(services));
+        var result = await HttpFunction.GetItem_Handler(req, HandlerTestHost.CreateContext(services));
 
         Assert.Equal(200, HandlerTestHost.StatusOf(result));
         var body = HandlerTestHost.ValueOf<ItemResponse>(result);
@@ -114,7 +117,7 @@ public sealed class FunctionHandlerTests
             services,
             route: new Dictionary<string, object?> { ["id"] = "0" });
 
-        var result = await Function.GetItem_Handler(req, HandlerTestHost.CreateContext(services));
+        var result = await HttpFunction.GetItem_Handler(req, HandlerTestHost.CreateContext(services));
 
         Assert.Equal(404, HandlerTestHost.StatusOf(result));
     }
@@ -127,7 +130,7 @@ public sealed class FunctionHandlerTests
             services,
             route: new Dictionary<string, object?> { ["id"] = "abc" });
 
-        var result = await Function.GetItem_Handler(req, HandlerTestHost.CreateContext(services));
+        var result = await HttpFunction.GetItem_Handler(req, HandlerTestHost.CreateContext(services));
 
         Assert.Equal(400, HandlerTestHost.StatusOf(result));
     }
@@ -140,7 +143,7 @@ public sealed class FunctionHandlerTests
             services,
             headers: new Dictionary<string, StringValues> { ["X-Correlation-Id"] = "corr-1" });
 
-        var result = await Function.HeaderEcho_Handler(req, HandlerTestHost.CreateContext(services));
+        var result = await HttpFunction.HeaderEcho_Handler(req, HandlerTestHost.CreateContext(services));
 
         Assert.Equal(200, HandlerTestHost.StatusOf(result));
     }
@@ -153,7 +156,7 @@ public sealed class FunctionHandlerTests
             services,
             route: new Dictionary<string, object?> { ["name"] = "unknown" });
 
-        var result = await Function.Lookup_Handler(req, HandlerTestHost.CreateContext(services));
+        var result = await HttpFunction.Lookup_Handler(req, HandlerTestHost.CreateContext(services));
 
         Assert.Equal(404, HandlerTestHost.StatusOf(result));
     }
@@ -166,7 +169,7 @@ public sealed class FunctionHandlerTests
             services,
             route: new Dictionary<string, object?> { ["name"] = "widget" });
 
-        var result = await Function.Lookup_Handler(req, HandlerTestHost.CreateContext(services));
+        var result = await HttpFunction.Lookup_Handler(req, HandlerTestHost.CreateContext(services));
 
         Assert.Equal(200, HandlerTestHost.StatusOf(result));
     }
@@ -178,7 +181,7 @@ public sealed class FunctionHandlerTests
         var json = HandlerTestHost.Json(new { name = "World" });
         var req = HandlerTestHost.CreateRequest(services, body: json);
 
-        var result = await Function.Greet_Handler(req, HandlerTestHost.CreateContext(services));
+        var result = await HttpFunction.Greet_Handler(req, HandlerTestHost.CreateContext(services));
 
         Assert.Equal(200, HandlerTestHost.StatusOf(result));
         var body = HandlerTestHost.ValueOf<GreetResponse>(result);
