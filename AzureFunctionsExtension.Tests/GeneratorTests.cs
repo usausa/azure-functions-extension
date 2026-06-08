@@ -6,9 +6,9 @@ using static AzureFunctionsExtension.Tests.CompilationHelper;
 
 public sealed class GeneratorTests
 {
-    // ---------------------------------------------------------------------------
-    // ラッパー生成 / DI 解決
-    // ---------------------------------------------------------------------------
+    //--------------------------------------------------------------------------------
+    // Service resolution
+    //--------------------------------------------------------------------------------
 
     [Fact]
     public void GeneratesWrappersUsingFunctionContextServicesAndCancellationToken()
@@ -89,9 +89,9 @@ public sealed class GeneratorTests
         Assert.Contains("GetRequiredKeyedService<global::TestFunctions.IClock>(services, \"primary\")", result.GeneratedCode, StringComparison.Ordinal);
     }
 
-    // ---------------------------------------------------------------------------
-    // ハンドラ構造 / 例外ロギング
-    // ---------------------------------------------------------------------------
+    //--------------------------------------------------------------------------------
+    // Handler
+    //--------------------------------------------------------------------------------
 
     [Fact]
     public void GeneratesExceptionLoggingInHttpHandler()
@@ -143,8 +143,6 @@ public sealed class GeneratorTests
 
         var result = RunGenerator(source);
 
-        // Generated code references TimerInfo/TimerTrigger from the extension package
-        // which is not in test compilation references — check code content only.
         Assert.Contains("TimerTrigger", result.GeneratedCode, StringComparison.Ordinal);
         Assert.Contains("catch (global::System.Exception ex)", result.GeneratedCode, StringComparison.Ordinal);
         Assert.Contains("FunctionContextLoggerExtensions.GetLogger", result.GeneratedCode, StringComparison.Ordinal);
@@ -172,17 +170,15 @@ public sealed class GeneratorTests
 
         var result = RunGenerator(source);
 
-        // Generated code references QueueTrigger from the extension package
-        // which is not in test compilation references — check code content only.
         Assert.Contains("QueueTrigger", result.GeneratedCode, StringComparison.Ordinal);
         Assert.Contains("catch (global::System.Exception ex)", result.GeneratedCode, StringComparison.Ordinal);
         Assert.Contains("FunctionContextLoggerExtensions.GetLogger", result.GeneratedCode, StringComparison.Ordinal);
         Assert.Contains("throw;", result.GeneratedCode, StringComparison.Ordinal);
     }
 
-    // ---------------------------------------------------------------------------
-    // 戻り値の扱い（IActionResult / POCO / void）
-    // ---------------------------------------------------------------------------
+    //--------------------------------------------------------------------------------
+    // Result
+    //--------------------------------------------------------------------------------
 
     [Fact]
     public void ReturnsActionResultWithoutWrapping()
@@ -265,9 +261,9 @@ public sealed class GeneratorTests
         Assert.DoesNotContain("var __result__", result.GeneratedCode, StringComparison.Ordinal);
     }
 
-    // ---------------------------------------------------------------------------
-    // パラメータバインド（変換 / 配列）
-    // ---------------------------------------------------------------------------
+    //--------------------------------------------------------------------------------
+    // Parameter binding
+    //--------------------------------------------------------------------------------
 
     [Fact]
     public void GeneratesStringConverterCallForIntQueryParameter()
@@ -358,9 +354,9 @@ public sealed class GeneratorTests
         Assert.Contains("TryToInt32", result.GeneratedCode, StringComparison.Ordinal);
     }
 
-    // ---------------------------------------------------------------------------
-    // 既定値バインド（省略可能パラメータ）
-    // ---------------------------------------------------------------------------
+    //--------------------------------------------------------------------------------
+    // Default value binding
+    //--------------------------------------------------------------------------------
 
     [Fact]
     public void BindsNullableQueryParameterDefaultValue()
@@ -617,9 +613,9 @@ public sealed class GeneratorTests
         Assert.Contains("ctx.Result = new global::Microsoft.AspNetCore.Mvc.BadRequestObjectResult", result.GeneratedCode, StringComparison.Ordinal);
     }
 
-    // ---------------------------------------------------------------------------
-    // [FromBody]
-    // ---------------------------------------------------------------------------
+    //--------------------------------------------------------------------------------
+    // FromBody
+    //--------------------------------------------------------------------------------
 
     [Fact]
     public void GeneratesBadRequestHandlingForInvalidOrMissingRequestBody()
@@ -654,9 +650,9 @@ public sealed class GeneratorTests
         Assert.Contains("Request body is required.", result.GeneratedCode, StringComparison.Ordinal);
     }
 
-    // ---------------------------------------------------------------------------
-    // フィルターパイプライン
-    // ---------------------------------------------------------------------------
+    //--------------------------------------------------------------------------------
+    // Filter pipeline
+    //--------------------------------------------------------------------------------
 
     [Fact]
     public void GeneratesHttpHandlerWithFilterPipeline()

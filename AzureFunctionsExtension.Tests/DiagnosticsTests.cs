@@ -2,10 +2,12 @@ namespace AzureFunctionsExtension.Tests;
 
 using static AzureFunctionsExtension.Tests.CompilationHelper;
 
-// FunctionGenerator の診断（AFE0001〜AFE0013）の発生条件を、対象 ID 順に検証するテスト。
 public sealed class DiagnosticsTests
 {
+    //--------------------------------------------------------------------------------
     // AFE0001
+    //--------------------------------------------------------------------------------
+
     [Fact]
     public void ReportsDiagnosticWhenClassIsNotPartial()
     {
@@ -29,7 +31,10 @@ public sealed class DiagnosticsTests
         Assert.Contains(result.Diagnostics, static d => d.Id == "AFE0001");
     }
 
+    //--------------------------------------------------------------------------------
     // AFE0002
+    //--------------------------------------------------------------------------------
+
     [Fact]
     public void ReportsDiagnosticWhenClassIsGeneric()
     {
@@ -53,7 +58,10 @@ public sealed class DiagnosticsTests
         Assert.Contains(result.Diagnostics, static d => d.Id == "AFE0002");
     }
 
+    //--------------------------------------------------------------------------------
     // AFE0003
+    //--------------------------------------------------------------------------------
+
     [Fact]
     public void ReportsDiagnosticWhenClassIsNested()
     {
@@ -80,7 +88,10 @@ public sealed class DiagnosticsTests
         Assert.Contains(result.Diagnostics, static d => d.Id == "AFE0003");
     }
 
+    //--------------------------------------------------------------------------------
     // AFE0004
+    //--------------------------------------------------------------------------------
+
     [Fact]
     public void ReportsDiagnosticWhenTypeIsRecord()
     {
@@ -104,7 +115,10 @@ public sealed class DiagnosticsTests
         Assert.Contains(result.Diagnostics, static d => d.Id == "AFE0004");
     }
 
+    //--------------------------------------------------------------------------------
     // AFE0005
+    //--------------------------------------------------------------------------------
+
     [Fact]
     public void ReportsDiagnosticWhenClassIsAbstract()
     {
@@ -128,7 +142,10 @@ public sealed class DiagnosticsTests
         Assert.Contains(result.Diagnostics, static d => d.Id == "AFE0005");
     }
 
+    //--------------------------------------------------------------------------------
     // AFE0006
+    //--------------------------------------------------------------------------------
+
     [Fact]
     public void ReportsDiagnosticWhenFilterTypeDoesNotImplementIFunctionFilter()
     {
@@ -157,7 +174,10 @@ public sealed class DiagnosticsTests
         Assert.Contains(result.Diagnostics, static d => d.Id == "AFE0006");
     }
 
+    //--------------------------------------------------------------------------------
     // AFE0007
+    //--------------------------------------------------------------------------------
+
     [Fact]
     public void ReportsDiagnosticWhenHandlerHasMultipleEndpointAttributes()
     {
@@ -182,7 +202,10 @@ public sealed class DiagnosticsTests
         Assert.Contains(result.Diagnostics, static d => d.Id == "AFE0007");
     }
 
+    //--------------------------------------------------------------------------------
     // AFE0008
+    //--------------------------------------------------------------------------------
+
     [Fact]
     public void ReportsDiagnosticWhenHandlerIsOverloaded()
     {
@@ -209,7 +232,10 @@ public sealed class DiagnosticsTests
         Assert.Contains(result.Diagnostics, static d => d.Id == "AFE0008");
     }
 
+    //--------------------------------------------------------------------------------
     // AFE0009
+    //--------------------------------------------------------------------------------
+
     [Fact]
     public void ReportsDiagnosticWhenHttpOnlyBindingUsedOnNonHttpHandler()
     {
@@ -234,7 +260,10 @@ public sealed class DiagnosticsTests
         Assert.Contains(result.Diagnostics, static d => d.Id == "AFE0009");
     }
 
+    //--------------------------------------------------------------------------------
     // AFE0010
+    //--------------------------------------------------------------------------------
+
     [Fact]
     public void ReportsDiagnosticWhenQueueHandlerHasMultipleTriggerPayloads()
     {
@@ -283,7 +312,10 @@ public sealed class DiagnosticsTests
         Assert.DoesNotContain(result.Diagnostics, static d => d.Id == "AFE0010");
     }
 
+    //--------------------------------------------------------------------------------
     // AFE0011
+    //--------------------------------------------------------------------------------
+
     [Fact]
     public void ReportsDiagnosticWhenMultipleBindingAttributesAreApplied()
     {
@@ -310,7 +342,10 @@ public sealed class DiagnosticsTests
         Assert.Contains(result.Diagnostics, static d => d.Id == "AFE0011");
     }
 
+    //--------------------------------------------------------------------------------
     // AFE0012
+    //--------------------------------------------------------------------------------
+
     [Fact]
     public void ReportsDiagnosticWhenTextBindingTypeIsUnsupported()
     {
@@ -342,7 +377,10 @@ public sealed class DiagnosticsTests
         Assert.Contains(result.Diagnostics, static d => d.Id == "AFE0012");
     }
 
+    //--------------------------------------------------------------------------------
     // AFE0013
+    //--------------------------------------------------------------------------------
+
     [Fact]
     public void ReportsDiagnosticWhenRouteParameterIsNotBound()
     {
