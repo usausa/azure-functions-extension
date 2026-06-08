@@ -874,7 +874,7 @@ internal static class FunctionSourceBuilder
         // IActionResult はそのまま、それ以外の戻り値は Results.Ok でラップする
         // Return IActionResult as-is; wrap any other return value with Results.Ok
         builder.AppendLine($"var __result__ = {awaitPrefix}target.{handler.MethodName}({args});");
-        var resultExpr = handler.ResultIsActionResult ? "__result__" : $"{ResultsType}.Ok(__result__)";
+        var resultExpr = handler.ResponseType == ResponseType.ActionResult ? "__result__" : $"{ResultsType}.Ok(__result__)";
         EmitHttpResult(builder, resultExpr, hasFilter);
     }
 

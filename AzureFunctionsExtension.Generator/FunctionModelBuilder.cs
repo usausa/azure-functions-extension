@@ -353,12 +353,14 @@ internal static class FunctionModelBuilder
             resultIsActionResult = IsActionResult(returnType);
         }
 
+        var responseType = resultIsActionResult ? ResponseType.ActionResult : ResponseType.Poco;
+
         return new HandlerModel(
             method.Name,
             handlerType.Value,
             isAsync,
             resultType,
-            resultIsActionResult,
+            responseType,
             new EquatableArray<ParameterModel>(parameters.ToArray()),
             httpMethod,
             route,
