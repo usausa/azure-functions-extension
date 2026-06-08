@@ -356,16 +356,16 @@ internal static class FunctionModelBuilder
         return new HandlerModel(
             method.Name,
             handlerType.Value,
+            isAsync,
+            resultType,
+            resultIsActionResult,
+            new EquatableArray<ParameterModel>(parameters.ToArray()),
             httpMethod,
             route,
             authorizationLevel,
             timerSchedule,
             queueName,
-            queueConnection,
-            isAsync,
-            resultType,
-            resultIsActionResult,
-            new EquatableArray<ParameterModel>(parameters.ToArray()));
+            queueConnection);
     }
 
     private static string GetAuthorizationLevelName(int value)
