@@ -14,11 +14,18 @@ using Microsoft.Extensions.DependencyInjection;
 
 using Xunit;
 
-// テスト用のコンパイルヘルパー。
-// ソースコードを Roslyn でコンパイルし、FunctionGenerator を実行して生成コードと診断を取得する。
 internal static class CompilationHelper
 {
-    internal static void AssertNoGeneratorErrors(GeneratorTestResult result)
+    private const string GlobalUsings =
+        """
+        global using System;
+        global using System.Collections.Generic;
+        global using System.Linq;
+        global using System.Threading;
+        global using System.Threading.Tasks;
+        """;
+
+    public static void AssertNoGeneratorErrors(GeneratorResult result)
     {
         var errors = result.Diagnostics
             .Where(static d => d.Severity == DiagnosticSeverity.Error)
@@ -27,18 +34,20 @@ internal static class CompilationHelper
         Assert.True(errors.Length == 0, string.Join(Environment.NewLine, errors.Select(static d => d.ToString())));
     }
 
-    internal static GeneratorTestResult RunGenerator(string source)
+    public static GeneratorResult RunGenerator(string source)
     {
         var parseOptions = new CSharpParseOptions(LanguageVersion.Preview);
         var syntaxTree = CSharpSyntaxTree.ParseText(source, parseOptions);
+
+        var globalUsings = CSharpSyntaxTree.ParseText(GlobalUsings, parseOptions);
         var compilation = CSharpCompilation.Create(
-            assemblyName: "GeneratorTests",
-            syntaxTrees: [syntaxTree],
-            references: GetMetadataReferences(),
-            options: new CSharpCompilationOptions(OutputKind.DynamicallyLinkedLibrary));
+            "TestAssembly",
+            [syntaxTree, globalUsings],
+            GetMetadataReferences(),
+            new CSharpCompilationOptions(OutputKind.DynamicallyLinkedLibrary));
 
         GeneratorDriver driver = CSharpGeneratorDriver.Create(
-            generators: [new FunctionGenerator().AsSourceGenerator()],
+            [new FunctionGenerator().AsSourceGenerator()],
             parseOptions: parseOptions);
 
         driver = driver.RunGeneratorsAndUpdateCompilation(compilation, out var outputCompilation, out var generatorDiagnostics);
@@ -48,13 +57,16 @@ internal static class CompilationHelper
             .Concat(runResult.Diagnostics)
             .Distinct()
             .ToImmutableArray();
+        var sources = runResult.Results
+            .SelectMany(static r => r.GeneratedSources)
+            .ToDictionary(static s => s.HintName, static s => s.SourceText.ToString());
         var generatedCode = string.Join(
             Environment.NewLine + Environment.NewLine,
             runResult.Results
-                .SelectMany(static x => x.GeneratedSources)
-                .Select(static x => x.SourceText.ToString()));
+                .SelectMany(static r => r.GeneratedSources)
+                .Select(static s => s.SourceText.ToString()));
 
-        return new GeneratorTestResult(diagnostics, generatedCode);
+        return new GeneratorResult(diagnostics, sources, generatedCode);
     }
 
     private static ImmutableArray<MetadataReference> GetMetadataReferences()
@@ -64,19 +76,20 @@ internal static class CompilationHelper
             ?? [];
         var assemblyPaths = new HashSet<string>(trustedAssemblies, StringComparer.OrdinalIgnoreCase)
         {
+            typeof(IServiceCollection).Assembly.Location,
+            typeof(ILogger<>).Assembly.Location,
             typeof(AzureFunctionAttribute).Assembly.Location,
             typeof(FunctionGenerator).Assembly.Location,
             typeof(FunctionContext).Assembly.Location,
             typeof(HttpRequest).Assembly.Location,
-            typeof(IActionResult).Assembly.Location,
-            typeof(IServiceCollection).Assembly.Location,
-            typeof(ILogger<>).Assembly.Location
+            typeof(IActionResult).Assembly.Location
         };
 
         return [.. assemblyPaths.Select(static path => (MetadataReference)MetadataReference.CreateFromFile(path))];
     }
 
-    internal sealed record GeneratorTestResult(
+    public sealed record GeneratorResult(
         ImmutableArray<Diagnostic> Diagnostics,
+        IReadOnlyDictionary<string, string> Sources,
         string GeneratedCode);
 }
