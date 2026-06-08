@@ -1,4 +1,11 @@
 <Solution>
+  <Folder Name="/Example/">
+    <Project Path="AzureFunctionsExtension.Example\AzureFunctionsExtension.Example.csproj" />
+  </Folder>
+  <Folder Name="/Library/">
+    <Project Path="AzureFunctionsExtension.Generator\AzureFunctionsExtension.Generator.csproj" />
+    <Project Path="AzureFunctionsExtension\AzureFunctionsExtension.csproj" />
+  </Folder>
   <Folder Name="/Solution Items/">
     <File Path=".editorconfig" />
     <File Path=".gitattributes" />
@@ -14,8 +21,7 @@
     <File Path="LICENSE" />
     <File Path="README.md" />
   </Folder>
-  <Project Path="AzureFunctionsExtension\AzureFunctionsExtension.csproj" />
-  <Project Path="AzureFunctionsExtension.Generator\AzureFunctionsExtension.Generator.csproj" />
-  <Project Path="AzureFunctionsExtension.Example\AzureFunctionsExtension.Example.csproj" />
-  <Project Path="AzureFunctionsExtension.Tests\AzureFunctionsExtension.Tests.csproj" />
+  <Folder Name="/Tests/">
+    <Project Path="AzureFunctionsExtension.Tests\AzureFunctionsExtension.Tests.csproj" />
+  </Folder>
 </Solution>
