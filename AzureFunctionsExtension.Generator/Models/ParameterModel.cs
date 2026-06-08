@@ -1,6 +1,6 @@
 namespace AzureFunctionsExtension.Generator.Models;
 
-internal enum ParameterBindingKind
+internal enum ParameterBindingType
 {
     HttpRequest,
     FunctionContext,
@@ -17,7 +17,7 @@ internal enum ParameterBindingKind
 internal sealed record ParameterModel(
     string Name,
     TypeRefModel Type,
-    ParameterBindingKind BindingKind,
+    ParameterBindingType BindingType,
     string Key,
     string ConverterMethod,
     bool SkipValidation,

@@ -2,7 +2,7 @@ namespace AzureFunctionsExtension.Generator.Models;
 
 using SourceGenerateHelper;
 
-internal enum HandlerKind
+internal enum HandlerType
 {
     Http,
     Timer,
@@ -11,7 +11,7 @@ internal enum HandlerKind
 
 internal sealed record HandlerModel(
     string MethodName,
-    HandlerKind Kind,
+    HandlerType Type,
     string? HttpMethod,
     string? Route,
     string? AuthorizationLevel,

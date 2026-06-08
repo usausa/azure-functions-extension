@@ -201,10 +201,10 @@ internal static class FunctionModelBuilder
     }
 
     // メソッドのエンドポイント属性 (Http/Timer/Queue) を解析してハンドラーの種類と設定を決定する。
-    // Analyzes endpoint attributes (Http/Timer/Queue) on a method to determine handler kind and configuration.
+    // Analyzes endpoint attributes (Http/Timer/Queue) on a method to determine handler handlerType and configuration.
     private static HandlerModel? BuildHandlerModel(IMethodSymbol method, List<DiagnosticInfo> diagnostics)
     {
-        HandlerKind? kind = null;
+        HandlerType? handlerType = null;
         string? httpMethod = null;
         string? route = null;
         string? authorizationLevel = null;
@@ -219,7 +219,7 @@ internal static class FunctionModelBuilder
             if (attrName == HttpEndpointAttributeName)
             {
                 handlerAttrCount++;
-                kind = HandlerKind.Http;
+                handlerType = HandlerType.Http;
                 httpMethod = attr.ConstructorArguments.Length > 0 ? attr.ConstructorArguments[0].Value as string : null;
                 route = attr.ConstructorArguments.Length > 1 ? attr.ConstructorArguments[1].Value as string : null;
                 if (attr.ConstructorArguments.Length > 2)
@@ -235,13 +235,13 @@ internal static class FunctionModelBuilder
             else if (attrName == TimerEndpointAttributeName)
             {
                 handlerAttrCount++;
-                kind = HandlerKind.Timer;
+                handlerType = HandlerType.Timer;
                 timerSchedule = attr.ConstructorArguments.Length > 0 ? attr.ConstructorArguments[0].Value as string : null;
             }
             else if (attrName == QueueEndpointAttributeName)
             {
                 handlerAttrCount++;
-                kind = HandlerKind.Queue;
+                handlerType = HandlerType.Queue;
                 queueName = attr.ConstructorArguments.Length > 0 ? attr.ConstructorArguments[0].Value as string : null;
                 queueConnection = attr.ConstructorArguments.Length > 1 ? attr.ConstructorArguments[1].Value as string : null;
             }
@@ -249,7 +249,7 @@ internal static class FunctionModelBuilder
 
         // エンドポイント属性がなければハンドラーではないのでスキップ
         // Skip if no endpoint attribute is present
-        if (kind is null)
+        if (handlerType is null)
         {
             return null;
         }
@@ -264,11 +264,11 @@ internal static class FunctionModelBuilder
         }
 
         // 各パラメータのバインディング種別を解決してパラメータモデルを構築する
-        // Resolve binding kind for each parameter and build parameter models
+        // Resolve binding handlerType for each parameter and build parameter models
         var parameters = new List<ParameterModel>();
         foreach (var param in method.Parameters)
         {
-            if (kind != HandlerKind.Http)
+            if (handlerType != HandlerType.Http)
             {
                 var hasHttpOnlyAttr = param.GetAttributes().Any(a =>
                     (a.AttributeClass?.ToDisplayString() == FromQueryAttributeName) ||
@@ -283,7 +283,7 @@ internal static class FunctionModelBuilder
                 }
             }
 
-            var paramModel = BuildParameterModel(param, kind.Value, diagnostics);
+            var paramModel = BuildParameterModel(param, handlerType.Value, diagnostics);
             if (paramModel is null)
             {
                 return null;
@@ -294,9 +294,9 @@ internal static class FunctionModelBuilder
 
         // Timer/Queue ハンドラーのトリガーペイロードは 1 つまで。複数あるとバインド先が曖昧になるためエラー
         // A Timer/Queue handler may bind at most one trigger payload; multiple would be ambiguous, so it is an error
-        if (kind != HandlerKind.Http)
+        if (handlerType != HandlerType.Http)
         {
-            var triggerCount = parameters.Count(static p => p.BindingKind == ParameterBindingKind.FromTrigger);
+            var triggerCount = parameters.Count(static p => p.BindingType == ParameterBindingType.FromTrigger);
             if (triggerCount > 1)
             {
                 var loc = method.Locations.Length > 0 ? method.Locations[0] : null;
@@ -305,7 +305,7 @@ internal static class FunctionModelBuilder
             }
         }
 
-        if (kind == HandlerKind.Http)
+        if (handlerType == HandlerType.Http)
         {
             ValidateRouteBindings(route ?? method.Name, parameters, method, diagnostics);
             if (diagnostics.Count > 0)
@@ -355,7 +355,7 @@ internal static class FunctionModelBuilder
 
         return new HandlerModel(
             method.Name,
-            kind.Value,
+            handlerType.Value,
             httpMethod,
             route,
             authorizationLevel,
@@ -383,10 +383,10 @@ internal static class FunctionModelBuilder
 
     // パラメータシンボルからバインディング属性を読み取り、ParameterModel を構築する。
     // Reads binding attributes from a parameter symbol and builds a ParameterModel.
-    private static ParameterModel? BuildParameterModel(IParameterSymbol param, HandlerKind handlerKind, List<DiagnosticInfo> diagnostics)
+    private static ParameterModel? BuildParameterModel(IParameterSymbol param, HandlerType handlerType, List<DiagnosticInfo> diagnostics)
     {
         var paramType = param.Type;
-        var bindingKind = ParameterBindingKind.FromQuery;
+        var bindingType = ParameterBindingType.FromQuery;
         var key = param.Name;
         var converterMethod = GetConverterMethod(paramType);
         var skipValidation = false;
@@ -398,14 +398,14 @@ internal static class FunctionModelBuilder
             if (attrName == FromBodyAttributeName)
             {
                 bindingAttrCount++;
-                bindingKind = ParameterBindingKind.FromBody;
+                bindingType = ParameterBindingType.FromBody;
                 var skipArg = attr.NamedArguments.FirstOrDefault(static a => a.Key == "SkipValidate").Value.Value;
                 skipValidation = skipArg is true;
             }
             else if (attrName == FromQueryAttributeName)
             {
                 bindingAttrCount++;
-                bindingKind = ParameterBindingKind.FromQuery;
+                bindingType = ParameterBindingType.FromQuery;
                 var nameArg = attr.ConstructorArguments.Length > 0 ? attr.ConstructorArguments[0].Value as string : null;
                 if (!String.IsNullOrEmpty(nameArg))
                 {
@@ -415,7 +415,7 @@ internal static class FunctionModelBuilder
             else if (attrName == FromHeaderAttributeName)
             {
                 bindingAttrCount++;
-                bindingKind = ParameterBindingKind.FromHeader;
+                bindingType = ParameterBindingType.FromHeader;
                 var nameArg = attr.ConstructorArguments.Length > 0 ? attr.ConstructorArguments[0].Value as string : null;
                 if (!String.IsNullOrEmpty(nameArg))
                 {
@@ -425,7 +425,7 @@ internal static class FunctionModelBuilder
             else if (attrName == FromRouteAttributeName)
             {
                 bindingAttrCount++;
-                bindingKind = ParameterBindingKind.FromRoute;
+                bindingType = ParameterBindingType.FromRoute;
                 var nameArg = attr.ConstructorArguments.Length > 0 ? attr.ConstructorArguments[0].Value as string : null;
                 if (!String.IsNullOrEmpty(nameArg))
                 {
@@ -435,7 +435,7 @@ internal static class FunctionModelBuilder
             else if (attrName == FromServicesAttributeName)
             {
                 bindingAttrCount++;
-                bindingKind = ParameterBindingKind.FromServices;
+                bindingType = ParameterBindingType.FromServices;
                 // [FromServices] のキーは未指定時 empty とし、keyed service 解決の有無を区別する
                 // For [FromServices] the key defaults to empty so keyed vs. non-keyed resolution can be distinguished
                 key = string.Empty;
@@ -448,7 +448,7 @@ internal static class FunctionModelBuilder
             else if (attrName == FromTriggerAttributeName)
             {
                 bindingAttrCount++;
-                bindingKind = ParameterBindingKind.FromTrigger;
+                bindingType = ParameterBindingType.FromTrigger;
             }
         }
 
@@ -469,33 +469,33 @@ internal static class FunctionModelBuilder
             var typeName = paramType.ToDisplayString();
             if (typeName == HttpRequestFullName)
             {
-                bindingKind = ParameterBindingKind.HttpRequest;
+                bindingType = ParameterBindingType.HttpRequest;
                 converterMethod = string.Empty;
             }
             else if (typeName == FunctionContextFullName)
             {
-                bindingKind = ParameterBindingKind.FunctionContext;
+                bindingType = ParameterBindingType.FunctionContext;
                 converterMethod = string.Empty;
             }
             else if (typeName == CancellationTokenFullName)
             {
-                bindingKind = ParameterBindingKind.CancellationToken;
+                bindingType = ParameterBindingType.CancellationToken;
                 converterMethod = string.Empty;
             }
             else if ((paramType is INamedTypeSymbol namedType) &&
                      (namedType.OriginalDefinition.ToDisplayString() == "Microsoft.Extensions.Logging.ILogger<TCategoryName>"))
             {
-                bindingKind = ParameterBindingKind.Logger;
+                bindingType = ParameterBindingType.Logger;
                 converterMethod = string.Empty;
             }
-            else if (handlerKind != HandlerKind.Http)
+            else if (handlerType != HandlerType.Http)
             {
-                bindingKind = ParameterBindingKind.FromTrigger;
+                bindingType = ParameterBindingType.FromTrigger;
                 converterMethod = string.Empty;
             }
         }
 
-        if (!IsSupportedBindingType(paramType, bindingKind, converterMethod))
+        if (!IsSupportedBindingType(paramType, bindingType, converterMethod))
         {
             diagnostics.Add(new DiagnosticInfo(
                 Diagnostics.UnsupportedBindingType,
@@ -516,7 +516,7 @@ internal static class FunctionModelBuilder
         return new ParameterModel(
             param.Name,
             MakeTypeRef(paramType),
-            bindingKind,
+            bindingType,
             key,
             converterMethod,
             skipValidation,
@@ -524,20 +524,20 @@ internal static class FunctionModelBuilder
             defaultValueLiteral);
     }
 
-    private static bool IsSupportedBindingType(ITypeSymbol type, ParameterBindingKind bindingKind, string converterMethod)
+    private static bool IsSupportedBindingType(ITypeSymbol type, ParameterBindingType bindingType, string converterMethod)
     {
-        return bindingKind switch
+        return bindingType switch
         {
-            ParameterBindingKind.HttpRequest or
-            ParameterBindingKind.FunctionContext or
-            ParameterBindingKind.CancellationToken or
-            ParameterBindingKind.Logger or
-            ParameterBindingKind.FromServices or
-            ParameterBindingKind.FromTrigger or
-            ParameterBindingKind.FromBody => true,
-            ParameterBindingKind.FromQuery or
-            ParameterBindingKind.FromHeader or
-            ParameterBindingKind.FromRoute => IsSupportedTextBindingType(type, converterMethod),
+            ParameterBindingType.HttpRequest or
+            ParameterBindingType.FunctionContext or
+            ParameterBindingType.CancellationToken or
+            ParameterBindingType.Logger or
+            ParameterBindingType.FromServices or
+            ParameterBindingType.FromTrigger or
+            ParameterBindingType.FromBody => true,
+            ParameterBindingType.FromQuery or
+            ParameterBindingType.FromHeader or
+            ParameterBindingType.FromRoute => IsSupportedTextBindingType(type, converterMethod),
             _ => false
         };
     }
@@ -572,7 +572,7 @@ internal static class FunctionModelBuilder
         }
 
         var boundRouteParameters = parameters
-            .Where(static p => p.BindingKind == ParameterBindingKind.FromRoute)
+            .Where(static p => p.BindingType == ParameterBindingType.FromRoute)
             .Select(static p => p.Key);
         var boundRouteParameterSet = new HashSet<string>(boundRouteParameters, StringComparer.OrdinalIgnoreCase);
 

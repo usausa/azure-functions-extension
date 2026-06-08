@@ -108,19 +108,19 @@ internal static class FunctionSourceBuilder
         builder.AppendLine($"    {model.FunctionType.FullName} target)");
         builder.BeginBlock();
 
-        if (handler.Kind == HandlerKind.Http)
+        if (handler.Type == HandlerType.Http)
         {
             // ctx.Request を HttpRequest にキャストして req 変数として取り出す
             // Cast ctx.Request to HttpRequest and expose it as req
             builder.AppendLine($"var req = ({HttpRequestType})ctx.Request!;");
             builder.NewLine();
         }
-        else if (handler.Kind == HandlerKind.Timer)
+        else if (handler.Type == HandlerType.Timer)
         {
             builder.AppendLine($"var timerInfo = ({TimerInfoType})ctx.Request!;");
             builder.NewLine();
         }
-        else if (handler.Kind == HandlerKind.Queue)
+        else if (handler.Type == HandlerType.Queue)
         {
             builder.AppendLine("var message = (string)ctx.Request!;");
             builder.NewLine();
@@ -177,15 +177,15 @@ internal static class FunctionSourceBuilder
     {
         builder.AppendLine($"[{FunctionAttributeType}(\"{handler.MethodName}\")]");
 
-        switch (handler.Kind)
+        switch (handler.Type)
         {
-            case HandlerKind.Http:
+            case HandlerType.Http:
                 BuildHttpHandlerMethod(builder, model, handler, model.Filters.Count > 0);
                 break;
-            case HandlerKind.Timer:
+            case HandlerType.Timer:
                 BuildTimerHandlerMethod(builder, model, handler, model.Filters.Count > 0);
                 break;
-            case HandlerKind.Queue:
+            case HandlerType.Queue:
                 BuildQueueHandlerMethod(builder, model, handler, model.Filters.Count > 0);
                 break;
         }
@@ -389,7 +389,7 @@ internal static class FunctionSourceBuilder
         for (var i = 0; i < parameters.Count; i++)
         {
             var p = parameters[i];
-            if (p.BindingKind == ParameterBindingKind.FromServices)
+            if (p.BindingType == ParameterBindingType.FromServices)
             {
                 builder.AppendLine($"var p{i} = {ResolveServiceExpression(p.Type.FullName, p.Key)};");
                 builder.NewLine();
@@ -412,7 +412,7 @@ internal static class FunctionSourceBuilder
         for (var i = 0; i < parameters.Count; i++)
         {
             var p = parameters[i];
-            if (p.BindingKind == ParameterBindingKind.FromServices)
+            if (p.BindingType == ParameterBindingType.FromServices)
             {
                 builder.AppendLine($"var p{i} = {ResolveServiceExpression(p.Type.FullName, p.Key)};");
                 builder.NewLine();
@@ -433,18 +433,18 @@ internal static class FunctionSourceBuilder
         var pVar = $"p{index}";
         var typeName = param.Type.FullName;
 
-        switch (param.BindingKind)
+        switch (param.BindingType)
         {
-            case ParameterBindingKind.HttpRequest:
-            case ParameterBindingKind.FunctionContext:
-            case ParameterBindingKind.CancellationToken:
-            case ParameterBindingKind.Logger:
+            case ParameterBindingType.HttpRequest:
+            case ParameterBindingType.FunctionContext:
+            case ParameterBindingType.CancellationToken:
+            case ParameterBindingType.Logger:
                 return;
-            case ParameterBindingKind.FromServices:
+            case ParameterBindingType.FromServices:
                 builder.AppendLine($"var {pVar} = {ResolveServiceExpression(typeName, param.Key)};");
                 builder.NewLine();
                 return;
-            case ParameterBindingKind.FromBody:
+            case ParameterBindingType.FromBody:
                 builder.AppendLine($"var bodySerializer{index} = {GetService}<{BodySerializerType}>(services) ?? {DefaultBodySerializerType}.Default;");
                 builder.AppendLine($"var {pVar} = default({typeName})!;");
                 builder.AppendLine("try");
@@ -498,13 +498,13 @@ internal static class FunctionSourceBuilder
 
                 builder.NewLine();
                 return;
-            case ParameterBindingKind.FromQuery:
+            case ParameterBindingType.FromQuery:
                 BuildScalarOrArrayBinding(builder, param, index, hasFilter, "req.Query");
                 return;
-            case ParameterBindingKind.FromRoute:
+            case ParameterBindingType.FromRoute:
                 BuildRouteBinding(builder, param, index, hasFilter);
                 return;
-            case ParameterBindingKind.FromHeader:
+            case ParameterBindingType.FromHeader:
                 BuildHeaderBinding(builder, param, index, hasFilter);
                 return;
         }
@@ -844,7 +844,7 @@ internal static class FunctionSourceBuilder
         var args = BuildCallArgs(handler, hasFilter);
         var awaitPrefix = handler.IsAsync ? "await " : string.Empty;
 
-        if (handler.Kind != HandlerKind.Http)
+        if (handler.Type != HandlerType.Http)
         {
             if (handler.ResultType is not null)
             {
@@ -895,22 +895,22 @@ internal static class FunctionSourceBuilder
         for (var i = 0; i < parameters.Count; i++)
         {
             var p = parameters[i];
-            switch (p.BindingKind)
+            switch (p.BindingType)
             {
-                case ParameterBindingKind.HttpRequest:
+                case ParameterBindingType.HttpRequest:
                     argParts.Add("req");
                     break;
-                case ParameterBindingKind.FunctionContext:
+                case ParameterBindingType.FunctionContext:
                     argParts.Add(hasFilter ? "ctx.FunctionContext" : "context");
                     break;
-                case ParameterBindingKind.CancellationToken:
+                case ParameterBindingType.CancellationToken:
                     argParts.Add(hasFilter ? "ctx.CancellationToken" : "context.CancellationToken");
                     break;
-                case ParameterBindingKind.Logger:
+                case ParameterBindingType.Logger:
                     argParts.Add($"{GetRequiredService}<{p.Type.FullName}>(services)");
                     break;
-                case ParameterBindingKind.FromTrigger:
-                    argParts.Add(handler.Kind == HandlerKind.Timer ? "timerInfo" : "message");
+                case ParameterBindingType.FromTrigger:
+                    argParts.Add(handler.Type == HandlerType.Timer ? "timerInfo" : "message");
                     break;
                 default:
                     argParts.Add($"p{i}!");
