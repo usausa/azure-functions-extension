@@ -10,8 +10,7 @@ public static class Results
 
     public static IActionResult Ok(object body) => new SystemTextJsonResult(body);
 
-    public static IActionResult Created(string uri, object? body = null) =>
-        new CreatedResult(uri, body);
+    public static IActionResult Created(string uri, object? body = null) => new CreatedResult(uri, body);
 
     public static IActionResult NoContent() => new NoContentResult();
 
@@ -29,6 +28,5 @@ public static class Results
 
     public static IActionResult StatusCode(int statusCode) => new StatusCodeResult(statusCode);
 
-    public static IActionResult StatusCode(int statusCode, object body) =>
-        new ObjectResult(body) { StatusCode = statusCode };
+    public static IActionResult StatusCode(int statusCode, object body) => new ObjectResult(body) { StatusCode = statusCode };
 }
