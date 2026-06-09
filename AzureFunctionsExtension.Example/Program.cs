@@ -1,7 +1,5 @@
 using AzureFunctionsExtension;
-using AzureFunctionsExtension.Example.Filters;
 using AzureFunctionsExtension.Example.Functions;
-using AzureFunctionsExtension.Example.Services;
 
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
