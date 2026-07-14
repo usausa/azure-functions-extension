@@ -1,8 +1,8 @@
 namespace AzureFunctionsExtension.Binders;
 
 using System.Diagnostics.CodeAnalysis;
+using System.Globalization;
 
-#pragma warning disable CA1305
 [ExcludeFromCodeCoverage]
 public static class StringConverter
 {
@@ -10,37 +10,37 @@ public static class StringConverter
         => Boolean.TryParse(value, out result);
 
     public static bool TryToByte(ReadOnlySpan<char> value, out byte result)
-        => Byte.TryParse(value, out result);
+        => Byte.TryParse(value, CultureInfo.InvariantCulture, out result);
 
     public static bool TryToSByte(ReadOnlySpan<char> value, out sbyte result)
-        => SByte.TryParse(value, out result);
+        => SByte.TryParse(value, CultureInfo.InvariantCulture, out result);
 
     public static bool TryToInt16(ReadOnlySpan<char> value, out short result)
-        => Int16.TryParse(value, out result);
+        => Int16.TryParse(value, CultureInfo.InvariantCulture, out result);
 
     public static bool TryToUInt16(ReadOnlySpan<char> value, out ushort result)
-        => UInt16.TryParse(value, out result);
+        => UInt16.TryParse(value, CultureInfo.InvariantCulture, out result);
 
     public static bool TryToInt32(ReadOnlySpan<char> value, out int result)
-        => Int32.TryParse(value, out result);
+        => Int32.TryParse(value, CultureInfo.InvariantCulture, out result);
 
     public static bool TryToUInt32(ReadOnlySpan<char> value, out uint result)
-        => UInt32.TryParse(value, out result);
+        => UInt32.TryParse(value, CultureInfo.InvariantCulture, out result);
 
     public static bool TryToInt64(ReadOnlySpan<char> value, out long result)
-        => Int64.TryParse(value, out result);
+        => Int64.TryParse(value, CultureInfo.InvariantCulture, out result);
 
     public static bool TryToUInt64(ReadOnlySpan<char> value, out ulong result)
-        => UInt64.TryParse(value, out result);
+        => UInt64.TryParse(value, CultureInfo.InvariantCulture, out result);
 
     public static bool TryToSingle(ReadOnlySpan<char> value, out float result)
-        => Single.TryParse(value, out result);
+        => Single.TryParse(value, CultureInfo.InvariantCulture, out result);
 
     public static bool TryToDouble(ReadOnlySpan<char> value, out double result)
-        => Double.TryParse(value, out result);
+        => Double.TryParse(value, CultureInfo.InvariantCulture, out result);
 
     public static bool TryToDecimal(ReadOnlySpan<char> value, out decimal result)
-        => Decimal.TryParse(value, out result);
+        => Decimal.TryParse(value, CultureInfo.InvariantCulture, out result);
 
     public static bool TryToChar(ReadOnlySpan<char> value, out char result)
     {
@@ -54,19 +54,19 @@ public static class StringConverter
     }
 
     public static bool TryToDateTime(ReadOnlySpan<char> value, out DateTime result)
-        => DateTime.TryParse(value, out result);
+        => DateTime.TryParse(value, CultureInfo.InvariantCulture, out result);
 
     public static bool TryToDateTimeOffset(ReadOnlySpan<char> value, out DateTimeOffset result)
-        => DateTimeOffset.TryParse(value, out result);
+        => DateTimeOffset.TryParse(value, CultureInfo.InvariantCulture, out result);
 
     public static bool TryToDateOnly(ReadOnlySpan<char> value, out DateOnly result)
-        => DateOnly.TryParse(value, out result);
+        => DateOnly.TryParse(value, CultureInfo.InvariantCulture, out result);
 
     public static bool TryToTimeOnly(ReadOnlySpan<char> value, out TimeOnly result)
-        => TimeOnly.TryParse(value, out result);
+        => TimeOnly.TryParse(value, CultureInfo.InvariantCulture, out result);
 
     public static bool TryToTimeSpan(ReadOnlySpan<char> value, out TimeSpan result)
-        => TimeSpan.TryParse(value, out result);
+        => TimeSpan.TryParse(value, CultureInfo.InvariantCulture, out result);
 
     public static bool TryToGuid(ReadOnlySpan<char> value, out Guid result)
         => Guid.TryParse(value, out result);
@@ -75,4 +75,3 @@ public static class StringConverter
         where T : struct, Enum
         => Enum.TryParse(value, ignoreCase: true, out result);
 }
-#pragma warning restore CA1305

@@ -1,6 +1,5 @@
 namespace AzureFunctionsExtension.Generator;
 
-using System.Collections.Immutable;
 using System.Text;
 
 using AzureFunctionsExtension.Generator.Models;
@@ -22,39 +21,44 @@ public sealed class FunctionGenerator : IIncrementalGenerator
             .ForAttributeWithMetadataName(
                 AzureFunctionAttributeFullName,
                 static (syntax, _) => syntax is ClassDeclarationSyntax or RecordDeclarationSyntax,
-                static (ctx, _) => FunctionModelBuilder.BuildFunctionModel(ctx))
-            .Collect();
+                static (ctx, _) => FunctionModelBuilder.BuildFunctionModel(ctx));
 
-        context.RegisterImplementationSourceOutput(provider, static (ctx, results) => Execute(ctx, results));
+        context.RegisterSourceOutput(provider, static (ctx, result) => ReportDiagnostics(ctx, result));
+        context.RegisterImplementationSourceOutput(provider, static (ctx, result) => Execute(ctx, result));
     }
 
-    private static void Execute(SourceProductionContext context, ImmutableArray<Result<FunctionModel>> results)
+    private static void ReportDiagnostics(SourceProductionContext context, Result<FunctionModel> result)
     {
-        foreach (var diagnostic in results.SelectError())
+        foreach (var diagnostic in result.Diagnostics)
         {
             context.ReportDiagnostic(diagnostic);
         }
+    }
 
+    private static void Execute(SourceProductionContext context, Result<FunctionModel> result)
+    {
+        if (!result.HasValue)
+        {
+            return;
+        }
+
+        var model = result.Value;
         var builder = new SourceBuilder();
 
-        foreach (var model in results.SelectValue())
+        FunctionSourceBuilder.BuildShared(builder, model);
+        context.AddSource(
+            MakeFilename(model.Namespace, model.ClassName, "__shared__"),
+            SourceText.From(builder.ToString(), Encoding.UTF8));
+
+        foreach (var handler in model.Handlers)
         {
             context.CancellationToken.ThrowIfCancellationRequested();
 
             builder.Clear();
-            FunctionSourceBuilder.BuildShared(builder, model);
-            context.AddSource(
-                MakeFilename(model.Namespace, model.ClassName, "__shared__"),
-                SourceText.From(builder.ToString(), Encoding.UTF8));
+            FunctionSourceBuilder.Build(builder, model, handler);
 
-            foreach (var handler in model.Handlers)
-            {
-                builder.Clear();
-                FunctionSourceBuilder.Build(builder, model, handler);
-
-                var filename = MakeFilename(model.Namespace, model.ClassName, handler.MethodName);
-                context.AddSource(filename, SourceText.From(builder.ToString(), Encoding.UTF8));
-            }
+            var filename = MakeFilename(model.Namespace, model.ClassName, handler.MethodName);
+            context.AddSource(filename, SourceText.From(builder.ToString(), Encoding.UTF8));
         }
     }
 

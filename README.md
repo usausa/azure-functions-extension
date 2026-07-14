@@ -330,12 +330,13 @@ public sealed partial class QueueFunction
 
 ## JSON serialization
 
-`System.Text.Json` is used throughout.
+`System.Text.Json` is used throughout. Both input and output share the same `JsonOptions`
+configured on `AddAzureFunctionExtension`, which is based on `JsonSerializerDefaults.Web`
+(camelCase property names on write and case-insensitive property matching on read).
 
 * **Request body** (`[FromBody]`) is deserialized with the registered `IBodySerializer`.
-  The default uses camelCase property names and ignores `null` values.
-* **Response** (`Results.Ok(value)` etc.) is serialized with the `JsonOptions` configured on
-  `AddAzureFunctionExtension`.
+  The default serializer is built from the configured `JsonOptions`.
+* **Response** (`Results.Ok(value)` etc.) is serialized with the same `JsonOptions`.
 
 ### Configuration
 

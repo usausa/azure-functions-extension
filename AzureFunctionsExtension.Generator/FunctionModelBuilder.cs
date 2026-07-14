@@ -48,7 +48,7 @@ internal static class FunctionModelBuilder
         if (!isPartial)
         {
             return Results.Error<FunctionModel>(new DiagnosticInfo(
-                Diagnostics.NotPartialClass, syntax.GetLocation(), symbol.Name));
+                Diagnostics.NotPartialClass, syntax.Identifier.GetLocation(), symbol.Name));
         }
 
         // 生成コードは名前空間直下に partial 型として出力されるため、クラス定義の前提条件を検証する
@@ -56,25 +56,25 @@ internal static class FunctionModelBuilder
         if (symbol.IsGenericType)
         {
             return Results.Error<FunctionModel>(new DiagnosticInfo(
-                Diagnostics.GenericClass, syntax.GetLocation(), symbol.Name));
+                Diagnostics.GenericClass, syntax.Identifier.GetLocation(), symbol.Name));
         }
 
         if (symbol.ContainingType is not null)
         {
             return Results.Error<FunctionModel>(new DiagnosticInfo(
-                Diagnostics.NestedClass, syntax.GetLocation(), symbol.Name));
+                Diagnostics.NestedClass, syntax.Identifier.GetLocation(), symbol.Name));
         }
 
         if (symbol.IsRecord)
         {
             return Results.Error<FunctionModel>(new DiagnosticInfo(
-                Diagnostics.RecordClass, syntax.GetLocation(), symbol.Name));
+                Diagnostics.RecordClass, syntax.Identifier.GetLocation(), symbol.Name));
         }
 
         if (symbol.IsAbstract)
         {
             return Results.Error<FunctionModel>(new DiagnosticInfo(
-                Diagnostics.AbstractClass, syntax.GetLocation(), symbol.Name));
+                Diagnostics.AbstractClass, syntax.Identifier.GetLocation(), symbol.Name));
         }
 
         // 名前空間・クラス型参照を取得する / Resolve namespace and type reference
