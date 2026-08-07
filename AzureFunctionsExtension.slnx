@@ -1,7 +1,7 @@
 <Solution>
   <Folder Name="/Example/">
     <Project Path="AzureFunctionsExtension.Example.Tests\AzureFunctionsExtension.Example.Tests.csproj" />
-    <Project Path="AzureFunctionsExtension.Example\AzureFunctionsExtension.Example.csproj" />
+    <Project Path="AzureFunctionsExtension.Example\AzureFunctionsExtension.Example.csproj" DefaultStartup="true" />
   </Folder>
   <Folder Name="/Library/">
     <Project Path="AzureFunctionsExtension.Generator\AzureFunctionsExtension.Generator.csproj" />
