@@ -53,11 +53,15 @@ public static class StringConverter
         return false;
     }
 
+    // Styles are explicit so the result does not depend on the machine time zone: RoundtripKind
+    // keeps a Z input as Kind=Utc instead of converting it to local time, and an offset-less
+    // input stays Kind=Unspecified as before.
     public static bool TryToDateTime(ReadOnlySpan<char> value, out DateTime result)
-        => DateTime.TryParse(value, CultureInfo.InvariantCulture, out result);
+        => DateTime.TryParse(value, CultureInfo.InvariantCulture, DateTimeStyles.RoundtripKind, out result);
 
+    // An offset-less input is assumed to be UTC rather than machine-local.
     public static bool TryToDateTimeOffset(ReadOnlySpan<char> value, out DateTimeOffset result)
-        => DateTimeOffset.TryParse(value, CultureInfo.InvariantCulture, out result);
+        => DateTimeOffset.TryParse(value, CultureInfo.InvariantCulture, DateTimeStyles.AssumeUniversal, out result);
 
     public static bool TryToDateOnly(ReadOnlySpan<char> value, out DateOnly result)
         => DateOnly.TryParse(value, CultureInfo.InvariantCulture, out result);

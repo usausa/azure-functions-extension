@@ -13,11 +13,22 @@ public sealed class JsonBodySerializer : IBodySerializer
     {
         [RequiresUnreferencedCode("JSON serialization may require types that cannot be statically analyzed. Use the JsonSerializerContext overload.")]
         [RequiresDynamicCode("JSON serialization may require dynamic code generation. Use the JsonSerializerContext overload.")]
-        get => field ??= new(new JsonSerializerOptions
+        get
         {
-            PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
-            DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull
-        });
+            // field ??= is not atomic: racing first accesses could publish several instances,
+            // each with its own serializer metadata cache. CompareExchange keeps the instance
+            // unique while the getter stays lazy to carry the trimming annotations.
+            var instance = Volatile.Read(ref field);
+            if (instance is not null)
+            {
+                return instance;
+            }
+
+            // Same defaults as AddAzureFunctionExtension (JsonSerializerDefaults.Web), so JSON
+            // behaves identically whichever resolution path produced the serializer.
+            var created = new JsonBodySerializer(new JsonSerializerOptions(JsonSerializerDefaults.Web));
+            return Interlocked.CompareExchange(ref field, created, null) ?? created;
+        }
     }
 
     private readonly JsonSerializerOptions? options;

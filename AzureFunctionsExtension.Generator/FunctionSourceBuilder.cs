@@ -484,14 +484,19 @@ internal static class FunctionSourceBuilder
                     builder.AppendLine($"var requestValidator{index} = {GetService}<{RequestValidatorType}>(services) ?? new {DefaultRequestValidatorType}();");
                     builder.AppendLine($"if ({pVar} is not null && !requestValidator{index}.Validate({pVar}))");
                     builder.BeginBlock();
+                    // 失敗時のみ詳細を収集し直す（成功パスにアロケーションを増やさない）
+                    // Details are collected only on failure, keeping the success path allocation free
+                    builder.AppendLine($"var {pVar}errors = new global::System.Collections.Generic.List<global::System.ComponentModel.DataAnnotations.ValidationResult>();");
+                    builder.AppendLine($"_ = requestValidator{index}.Validate({pVar}, {pVar}errors);");
+                    builder.AppendLine($"var {pVar}message = \"Validation failed: {param.Name}\" + ({pVar}errors.Count > 0 ? \": \" + global::System.String.Join(\"; \", {pVar}errors) : \"\");");
                     if (hasFilter)
                     {
-                        builder.AppendLine($"ctx.Result = new {BadRequestResultType}(\"Validation failed: {param.Name}\");");
+                        builder.AppendLine($"ctx.Result = new {BadRequestResultType}({pVar}message);");
                         builder.AppendLine("return;");
                     }
                     else
                     {
-                        builder.AppendLine($"return new {BadRequestResultType}(\"Validation failed: {param.Name}\");");
+                        builder.AppendLine($"return new {BadRequestResultType}({pVar}message);");
                     }
                     builder.EndBlock();
                 }

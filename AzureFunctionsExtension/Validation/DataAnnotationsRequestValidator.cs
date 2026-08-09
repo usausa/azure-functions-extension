@@ -1,5 +1,6 @@
 namespace AzureFunctionsExtension.Validation;
 
+using System.Collections.Generic;
 using System.ComponentModel.DataAnnotations;
 using System.Diagnostics.CodeAnalysis;
 
@@ -9,7 +10,12 @@ public sealed class DataAnnotationsRequestValidator : IRequestValidator
     public bool Validate(object value)
     {
         var context = new ValidationContext(value);
-        var results = new List<ValidationResult>();
+        return Validator.TryValidateObject(value, context, null, true);
+    }
+
+    public bool Validate(object value, ICollection<ValidationResult> results)
+    {
+        var context = new ValidationContext(value);
         return Validator.TryValidateObject(value, context, results, true);
     }
 }
