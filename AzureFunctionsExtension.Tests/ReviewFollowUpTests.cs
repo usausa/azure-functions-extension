@@ -1,9 +1,8 @@
 #pragma warning disable CA1707
-namespace AzureFunctionsExtension;
+namespace AzureFunctionsExtension.Tests;
 
 using System.ComponentModel.DataAnnotations;
 using System.IO;
-using System.Text;
 
 using AzureFunctionsExtension.Binders;
 using AzureFunctionsExtension.Serialization;
@@ -102,7 +101,7 @@ public sealed class ReviewFollowUpTests
     [Fact]
     public void Default_DeserializesCaseInsensitively()
     {
-        using var body = new MemoryStream(Encoding.UTF8.GetBytes("""{"NAME":"abc"}"""));
+        using var body = new MemoryStream("""{"NAME":"abc"}"""u8.ToArray());
 
         var value = JsonBodySerializer.Default.Deserialize<NamedValue>(body);
 

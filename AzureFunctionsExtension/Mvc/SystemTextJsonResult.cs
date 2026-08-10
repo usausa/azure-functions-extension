@@ -32,9 +32,6 @@ public class SystemTextJsonResult : ActionResult
             ? jsonOpts.Value.Options
             : null;
 
-        // Serialization stops with the client. Note that the runtime type of Value is used:
-        // when JsonOptions is configured with a source-generated JsonSerializerContext, that
-        // runtime type must be registered in the context.
         return JsonSerializer.SerializeAsync(
             response.Body,
             Value,

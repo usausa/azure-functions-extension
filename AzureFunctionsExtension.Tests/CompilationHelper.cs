@@ -15,6 +15,7 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 
 using SourceGenerateHelper.Testing;
+
 internal static class CompilationHelper
 {
     private static GeneratorTestRunner Runner => GeneratorTestRunner
