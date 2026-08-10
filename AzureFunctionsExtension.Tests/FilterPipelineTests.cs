@@ -1,4 +1,3 @@
-#pragma warning disable CA1707
 namespace AzureFunctionsExtension.Tests;
 
 using AzureFunctionsExtension.Filters;
@@ -6,7 +5,7 @@ using AzureFunctionsExtension.Filters;
 public sealed class FilterPipelineTests
 {
     [Fact]
-    public async Task Pipeline_SingleFilter_RunsAroundTerminal()
+    public async Task PipelineSingleFilterRunsAroundTerminal()
     {
         List<string> log = [];
         ValueTask Terminal(FunctionInvocationContext c)
@@ -27,7 +26,7 @@ public sealed class FilterPipelineTests
     }
 
     [Fact]
-    public async Task Pipeline_MultipleFilters_ExecuteInOnionOrder()
+    public async Task PipelineMultipleFiltersExecuteInOnionOrder()
     {
         List<string> log = [];
         ValueTask Terminal(FunctionInvocationContext c)
@@ -46,7 +45,7 @@ public sealed class FilterPipelineTests
     }
 
     [Fact]
-    public async Task Pipeline_FilterShortCircuits_TerminalNotInvoked()
+    public async Task PipelineFilterShortCircuitsTerminalNotInvoked()
     {
         var terminalInvoked = false;
         ValueTask Terminal(FunctionInvocationContext c)
@@ -65,7 +64,7 @@ public sealed class FilterPipelineTests
     }
 
     [Fact]
-    public async Task Pipeline_OuterFilterObservesResultSetByTerminal()
+    public async Task PipelineOuterFilterObservesResultSetByTerminal()
     {
         List<string> log = [];
         static ValueTask Terminal(FunctionInvocationContext c)
@@ -83,7 +82,7 @@ public sealed class FilterPipelineTests
     }
 
     [Fact]
-    public async Task Pipeline_SharesStateViaItems()
+    public async Task PipelineSharesStateViaItems()
     {
         List<string> log = [];
         ValueTask Terminal(FunctionInvocationContext c)
@@ -101,7 +100,7 @@ public sealed class FilterPipelineTests
     }
 
     [Fact]
-    public async Task Pipeline_TerminalThrows_PropagatesAndSkipsAfter()
+    public async Task PipelineTerminalThrowsPropagatesAndSkipsAfter()
     {
         List<string> log = [];
         static ValueTask Terminal(FunctionInvocationContext c) => throw new InvalidOperationException("boom");

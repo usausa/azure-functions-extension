@@ -1,4 +1,3 @@
-#pragma warning disable CA1707
 namespace AzureFunctionsExtension.Tests;
 
 using System.ComponentModel.DataAnnotations;
@@ -15,7 +14,7 @@ public sealed class ReviewFollowUpTests
     //--------------------------------------------------------------------------------
 
     [Fact]
-    public void TryToDateTime_UtcDesignator_KeepsUtcKind()
+    public void TryToDateTimeUtcDesignatorKeepsUtcKind()
     {
         Assert.True(StringConverter.TryToDateTime("2026-06-10T01:02:03Z", out var result));
 
@@ -24,7 +23,7 @@ public sealed class ReviewFollowUpTests
     }
 
     [Fact]
-    public void TryToDateTime_WithoutOffset_KeepsUnspecifiedKind()
+    public void TryToDateTimeWithoutOffsetKeepsUnspecifiedKind()
     {
         Assert.True(StringConverter.TryToDateTime("2026-06-10T01:02:03", out var result));
 
@@ -32,7 +31,7 @@ public sealed class ReviewFollowUpTests
     }
 
     [Fact]
-    public void TryToDateTimeOffset_WithoutOffset_AssumesUtc()
+    public void TryToDateTimeOffsetWithoutOffsetAssumesUtc()
     {
         Assert.True(StringConverter.TryToDateTimeOffset("2026-06-10T01:02:03", out var result));
 
@@ -41,7 +40,7 @@ public sealed class ReviewFollowUpTests
     }
 
     [Fact]
-    public void TryToDateTimeOffset_WithOffset_KeepsOffset()
+    public void TryToDateTimeOffsetWithOffsetKeepsOffset()
     {
         Assert.True(StringConverter.TryToDateTimeOffset("2026-06-10T01:02:03+09:00", out var result));
 
@@ -62,7 +61,7 @@ public sealed class ReviewFollowUpTests
     }
 
     [Fact]
-    public void Validate_CollectsMemberDetails()
+    public void ValidateCollectsMemberDetails()
     {
         var validator = new DataAnnotationsRequestValidator();
         var results = new List<ValidationResult>();
@@ -80,7 +79,7 @@ public sealed class ReviewFollowUpTests
     }
 
     [Fact]
-    public void Validate_DetailOverload_FallsBackForBoolOnlyValidator()
+    public void ValidateDetailOverloadFallsBackForBoolOnlyValidator()
     {
         IRequestValidator validator = new BoolOnlyValidator();
         var results = new List<ValidationResult>();
@@ -101,7 +100,7 @@ public sealed class ReviewFollowUpTests
 #pragma warning restore CA1812
 
     [Fact]
-    public void Default_DeserializesCaseInsensitively()
+    public void DefaultDeserializesCaseInsensitively()
     {
         using var body = new MemoryStream("""{"NAME":"abc"}"""u8.ToArray());
 
