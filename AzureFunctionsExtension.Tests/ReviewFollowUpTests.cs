@@ -93,10 +93,12 @@ public sealed class ReviewFollowUpTests
     // JsonBodySerializer.Default: aligned with AddAzureFunctionExtension defaults
     //--------------------------------------------------------------------------------
 
+#pragma warning disable CA1812
     private sealed class NamedValue
     {
         public string? Name { get; set; }
     }
+#pragma warning restore CA1812
 
     [Fact]
     public void Default_DeserializesCaseInsensitively()
