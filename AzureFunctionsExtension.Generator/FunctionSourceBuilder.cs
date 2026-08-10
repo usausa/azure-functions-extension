@@ -56,8 +56,8 @@ internal static class FunctionSourceBuilder
 
         var classKeyword = model.IsValueType ? "struct" : "class";
         builder.AppendLine($"partial {classKeyword} {model.ClassName}");
-        builder.BeginBlock();
-        builder.EndBlock();
+        builder.BeginScope();
+        builder.EndScope();
     }
 
     // 1 ハンドラーに対応する部分クラスファイルを生成する。
@@ -79,7 +79,7 @@ internal static class FunctionSourceBuilder
 
         var classKeyword = model.IsValueType ? "struct" : "class";
         builder.AppendLine($"partial {classKeyword} {model.ClassName}");
-        builder.BeginBlock();
+        builder.BeginScope();
 
         if (model.Filters.Count > 0)
         {
@@ -93,7 +93,7 @@ internal static class FunctionSourceBuilder
 
         BuildHandlerMethod(builder, model, handler);
 
-        builder.EndBlock();
+        builder.EndScope();
     }
 
     // フィルターパイプラインから呼ばれる Inner メソッドを生成する。
@@ -106,7 +106,7 @@ internal static class FunctionSourceBuilder
         builder.AppendLine($"    {InvocationContextType} ctx,");
         builder.AppendLine("    global::System.IServiceProvider services,");
         builder.AppendLine($"    {model.FunctionType.FullName} target)");
-        builder.BeginBlock();
+        builder.BeginScope();
 
         if (handler.Type == HandlerType.Http)
         {
@@ -129,7 +129,7 @@ internal static class FunctionSourceBuilder
         BuildParameterBindings(builder, handler, hasFilter: true);
         BuildHandlerInvocation(builder, handler, hasFilter: true);
 
-        builder.EndBlock();
+        builder.EndScope();
     }
 
     // フィルターを逆順に合成してミドルウェアパイプラインを構築する静的フィールドとファクトリメソッドを生成する。
@@ -142,7 +142,7 @@ internal static class FunctionSourceBuilder
         builder.AppendLine($"private static {FilterDelegateType} Build{pascal}Pipeline(");
         builder.AppendLine("    global::System.IServiceProvider services,");
         builder.AppendLine($"    {model.FunctionType.FullName} target)");
-        builder.BeginBlock();
+        builder.BeginScope();
 
         var filters = model.Filters;
         // Inner メソッドをパイプラインの末端 (terminal) として設定する
@@ -167,7 +167,7 @@ internal static class FunctionSourceBuilder
 
         builder.NewLine();
         builder.AppendLine("return p;");
-        builder.EndBlock();
+        builder.EndScope();
     }
 
     // [Function] 属性を付与したエントリーポイントメソッドをハンドラーの種類に応じて振り分けて生成する。
@@ -206,7 +206,7 @@ internal static class FunctionSourceBuilder
         builder.AppendLine($"public static async global::System.Threading.Tasks.Task<{IActionResultType}> {handler.MethodName}_Handler(");
         builder.AppendLine($"    [{HttpTriggerType}({authLevel}, \"{httpMethod}\", Route = \"{route}\")] {HttpRequestType} req,");
         builder.AppendLine($"    {FunctionContextType} context)");
-        builder.BeginBlock();
+        builder.BeginScope();
 
         BuildInvocationSetup(builder, model);
         builder.NewLine();
@@ -214,49 +214,49 @@ internal static class FunctionSourceBuilder
         if (hasFilters)
         {
             builder.AppendLine($"var ctx = new {InvocationContextType}");
-            builder.BeginBlock();
+            builder.BeginScope();
             builder.AppendLine("Request = req,");
             builder.AppendLine("FunctionContext = context,");
             builder.AppendLine("CancellationToken = context.CancellationToken,");
-            builder.EndBlock(semicolon: true);
+            builder.EndScope(semicolon: true);
             builder.AppendLine($"var pipeline = Build{ToPascalCase(handler.MethodName)}Pipeline(services, target);");
             builder.NewLine();
 
             builder.AppendLine("try");
-            builder.BeginBlock();
+            builder.BeginScope();
             builder.AppendLine("await pipeline(ctx);");
-            builder.EndBlock();
+            builder.EndScope();
             builder.AppendLine($"catch ({ApiExceptionType} ex)");
-            builder.BeginBlock();
+            builder.BeginScope();
             builder.AppendLine($"return new {ObjectResultType}(ex.Message) {{ StatusCode = ex.StatusCode }};");
-            builder.EndBlock();
+            builder.EndScope();
             builder.AppendLine("catch (global::System.Exception ex)");
-            builder.BeginBlock();
+            builder.BeginScope();
             builder.AppendLine($"{LogErrorMethod}({GetLoggerMethod}(context, context.FunctionDefinition.Name), ex, ex.Message);");
             builder.AppendLine($"return new {StatusCodeResultType}(500);");
-            builder.EndBlock();
+            builder.EndScope();
             builder.NewLine();
             builder.AppendLine($"return ({IActionResultType})ctx.Result!;");
         }
         else
         {
             builder.AppendLine("try");
-            builder.BeginBlock();
+            builder.BeginScope();
             BuildParameterBindings(builder, handler, hasFilter: false);
             BuildHandlerInvocation(builder, handler, hasFilter: false);
-            builder.EndBlock();
+            builder.EndScope();
             builder.AppendLine($"catch ({ApiExceptionType} ex)");
-            builder.BeginBlock();
+            builder.BeginScope();
             builder.AppendLine($"return new {ObjectResultType}(ex.Message) {{ StatusCode = ex.StatusCode }};");
-            builder.EndBlock();
+            builder.EndScope();
             builder.AppendLine("catch (global::System.Exception ex)");
-            builder.BeginBlock();
+            builder.BeginScope();
             builder.AppendLine($"{LogErrorMethod}({GetLoggerMethod}(context, context.FunctionDefinition.Name), ex, ex.Message);");
             builder.AppendLine($"return new {StatusCodeResultType}(500);");
-            builder.EndBlock();
+            builder.EndScope();
         }
 
-        builder.EndBlock();
+        builder.EndScope();
     }
 
     // タイマートリガー向けエントリーポイントを生成する。
@@ -272,7 +272,7 @@ internal static class FunctionSourceBuilder
         builder.AppendLine($"public static async global::System.Threading.Tasks.Task {handler.MethodName}_Handler(");
         builder.AppendLine($"    [{TimerTriggerType}(\"{schedule}\")] {TimerInfoType} timerInfo,");
         builder.AppendLine($"    {FunctionContextType} context)");
-        builder.BeginBlock();
+        builder.BeginScope();
 
         BuildInvocationSetup(builder, model);
         builder.NewLine();
@@ -280,38 +280,38 @@ internal static class FunctionSourceBuilder
         if (hasFilters)
         {
             builder.AppendLine($"var ctx = new {InvocationContextType}");
-            builder.BeginBlock();
+            builder.BeginScope();
             builder.AppendLine("Request = timerInfo,");
             builder.AppendLine("FunctionContext = context,");
             builder.AppendLine("CancellationToken = context.CancellationToken,");
-            builder.EndBlock(semicolon: true);
+            builder.EndScope(semicolon: true);
             builder.AppendLine($"var pipeline = Build{ToPascalCase(handler.MethodName)}Pipeline(services, target);");
             builder.NewLine();
             builder.AppendLine("try");
-            builder.BeginBlock();
+            builder.BeginScope();
             builder.AppendLine("await pipeline(ctx);");
-            builder.EndBlock();
+            builder.EndScope();
             builder.AppendLine("catch (global::System.Exception ex)");
-            builder.BeginBlock();
+            builder.BeginScope();
             builder.AppendLine($"{LogErrorMethod}({GetLoggerMethod}(context, context.FunctionDefinition.Name), ex, ex.Message);");
             builder.AppendLine("throw;");
-            builder.EndBlock();
+            builder.EndScope();
         }
         else
         {
             builder.AppendLine("try");
-            builder.BeginBlock();
+            builder.BeginScope();
             BuildTimerParameterBindings(builder, handler);
             BuildHandlerInvocation(builder, handler, hasFilter: false);
-            builder.EndBlock();
+            builder.EndScope();
             builder.AppendLine("catch (global::System.Exception ex)");
-            builder.BeginBlock();
+            builder.BeginScope();
             builder.AppendLine($"{LogErrorMethod}({GetLoggerMethod}(context, context.FunctionDefinition.Name), ex, ex.Message);");
             builder.AppendLine("throw;");
-            builder.EndBlock();
+            builder.EndScope();
         }
 
-        builder.EndBlock();
+        builder.EndScope();
     }
 
     // キュートリガー向けエントリーポイントを生成する。
@@ -328,7 +328,7 @@ internal static class FunctionSourceBuilder
         builder.AppendLine($"public static async global::System.Threading.Tasks.Task {handler.MethodName}_Handler(");
         builder.AppendLine($"    [{QueueTriggerType}(\"{queueName}\"{connectionPart})] string message,");
         builder.AppendLine($"    {FunctionContextType} context)");
-        builder.BeginBlock();
+        builder.BeginScope();
 
         BuildInvocationSetup(builder, model);
         builder.NewLine();
@@ -336,38 +336,38 @@ internal static class FunctionSourceBuilder
         if (hasFilters)
         {
             builder.AppendLine($"var ctx = new {InvocationContextType}");
-            builder.BeginBlock();
+            builder.BeginScope();
             builder.AppendLine("Request = message,");
             builder.AppendLine("FunctionContext = context,");
             builder.AppendLine("CancellationToken = context.CancellationToken,");
-            builder.EndBlock(semicolon: true);
+            builder.EndScope(semicolon: true);
             builder.AppendLine($"var pipeline = Build{ToPascalCase(handler.MethodName)}Pipeline(services, target);");
             builder.NewLine();
             builder.AppendLine("try");
-            builder.BeginBlock();
+            builder.BeginScope();
             builder.AppendLine("await pipeline(ctx);");
-            builder.EndBlock();
+            builder.EndScope();
             builder.AppendLine("catch (global::System.Exception ex)");
-            builder.BeginBlock();
+            builder.BeginScope();
             builder.AppendLine($"{LogErrorMethod}({GetLoggerMethod}(context, context.FunctionDefinition.Name), ex, ex.Message);");
             builder.AppendLine("throw;");
-            builder.EndBlock();
+            builder.EndScope();
         }
         else
         {
             builder.AppendLine("try");
-            builder.BeginBlock();
+            builder.BeginScope();
             BuildQueueParameterBindings(builder, handler);
             BuildHandlerInvocation(builder, handler, hasFilter: false);
-            builder.EndBlock();
+            builder.EndScope();
             builder.AppendLine("catch (global::System.Exception ex)");
-            builder.BeginBlock();
+            builder.BeginScope();
             builder.AppendLine($"{LogErrorMethod}({GetLoggerMethod}(context, context.FunctionDefinition.Name), ex, ex.Message);");
             builder.AppendLine("throw;");
-            builder.EndBlock();
+            builder.EndScope();
         }
 
-        builder.EndBlock();
+        builder.EndScope();
     }
 
     // HTTP ハンドラーの全パラメータに対してバインディングコードを順に出力する。
@@ -448,11 +448,11 @@ internal static class FunctionSourceBuilder
                 builder.AppendLine($"var bodySerializer{index} = {GetService}<{BodySerializerType}>(services) ?? {DefaultBodySerializerType}.Default;");
                 builder.AppendLine($"var {pVar} = default({typeName})!;");
                 builder.AppendLine("try");
-                builder.BeginBlock();
+                builder.BeginScope();
                 builder.AppendLine($"{pVar} = bodySerializer{index}.Deserialize<{typeName}>(req.Body);");
-                builder.EndBlock();
+                builder.EndScope();
                 builder.AppendLine($"catch ({JsonExceptionType})");
-                builder.BeginBlock();
+                builder.BeginScope();
                 if (hasFilter)
                 {
                     builder.AppendLine($"ctx.Result = new {BadRequestResultType}(\"Invalid request body.\");");
@@ -462,11 +462,11 @@ internal static class FunctionSourceBuilder
                 {
                     builder.AppendLine($"return new {BadRequestResultType}(\"Invalid request body.\");");
                 }
-                builder.EndBlock();
+                builder.EndScope();
                 if (!param.IsNullableBodyParameter())
                 {
                     builder.AppendLine($"if ({pVar} is null)");
-                    builder.BeginBlock();
+                    builder.BeginScope();
                     if (hasFilter)
                     {
                         builder.AppendLine($"ctx.Result = new {BadRequestResultType}(\"Request body is required.\");");
@@ -476,14 +476,14 @@ internal static class FunctionSourceBuilder
                     {
                         builder.AppendLine($"return new {BadRequestResultType}(\"Request body is required.\");");
                     }
-                    builder.EndBlock();
+                    builder.EndScope();
                 }
 
                 if (!param.SkipValidation)
                 {
                     builder.AppendLine($"var requestValidator{index} = {GetService}<{RequestValidatorType}>(services) ?? new {DefaultRequestValidatorType}();");
                     builder.AppendLine($"if ({pVar} is not null && !requestValidator{index}.Validate({pVar}))");
-                    builder.BeginBlock();
+                    builder.BeginScope();
                     // 失敗時のみ詳細を収集し直す（成功パスにアロケーションを増やさない）
                     // Details are collected only on failure, keeping the success path allocation free
                     builder.AppendLine($"var {pVar}errors = new global::System.Collections.Generic.List<global::System.ComponentModel.DataAnnotations.ValidationResult>();");
@@ -498,7 +498,7 @@ internal static class FunctionSourceBuilder
                     {
                         builder.AppendLine($"return new {BadRequestResultType}({pVar}message);");
                     }
-                    builder.EndBlock();
+                    builder.EndScope();
                 }
 
                 builder.NewLine();
@@ -534,11 +534,11 @@ internal static class FunctionSourceBuilder
             builder.AppendLine($"var {pVar} = global::System.Array.Empty<{elemType}>();");
             builder.AppendLine($"if ({dictExpr}.TryGetValue(\"{key}\", out var {pRaw}) &&");
             builder.AppendLine($"    {pRaw} != global::Microsoft.Extensions.Primitives.StringValues.Empty)");
-            builder.BeginBlock();
+            builder.BeginScope();
             builder.AppendLine($"var {pVar}parts = {pRaw}.ToString().Split(',');");
             builder.AppendLine($"{pVar} = new {elemType}[{pVar}parts.Length];");
             builder.AppendLine($"for (var i = 0; i < {pVar}parts.Length; i++)");
-            builder.BeginBlock();
+            builder.BeginScope();
             if (String.IsNullOrEmpty(converterMethod))
             {
                 builder.AppendLine($"{pVar}[i] = {pVar}parts[i];");
@@ -551,7 +551,7 @@ internal static class FunctionSourceBuilder
                     ? $"!{StringConverterType}.TryToEnum<{baseElemType}>({AsSpanMethod}({pVar}parts[i]), out var {pVar}elem)"
                     : $"!{StringConverterType}.{converterMethod}({AsSpanMethod}({pVar}parts[i]), out var {pVar}elem)";
                 builder.AppendLine($"if ({converterCall})");
-                builder.BeginBlock();
+                builder.BeginScope();
                 if (hasFilter)
                 {
                     builder.AppendLine($"ctx.Result = new {BadRequestResultType}($\"Invalid parameter: {key}\");");
@@ -561,7 +561,7 @@ internal static class FunctionSourceBuilder
                 {
                     builder.AppendLine($"return new {BadRequestResultType}($\"Invalid parameter: {key}\");");
                 }
-                builder.EndBlock();
+                builder.EndScope();
                 builder.AppendLine($"{pVar}[i] = {pVar}elem;");
             }
             else
@@ -571,7 +571,7 @@ internal static class FunctionSourceBuilder
                     ? $"!{StringConverterType}.TryToEnum<{elemType}>({AsSpanMethod}({pVar}parts[i]), out {pVar}[i])"
                     : $"!{StringConverterType}.{converterMethod}({AsSpanMethod}({pVar}parts[i]), out {pVar}[i])";
                 builder.AppendLine($"if ({converterCall})");
-                builder.BeginBlock();
+                builder.BeginScope();
                 if (hasFilter)
                 {
                     builder.AppendLine($"ctx.Result = new {BadRequestResultType}($\"Invalid parameter: {key}\");");
@@ -581,11 +581,11 @@ internal static class FunctionSourceBuilder
                 {
                     builder.AppendLine($"return new {BadRequestResultType}($\"Invalid parameter: {key}\");");
                 }
-                builder.EndBlock();
+                builder.EndScope();
             }
 
-            builder.EndBlock();
-            builder.EndBlock();
+            builder.EndScope();
+            builder.EndScope();
             builder.NewLine();
         }
         else if (param.Type.IsNullable && (param.Type.UnderlyingType is not null))
@@ -596,7 +596,7 @@ internal static class FunctionSourceBuilder
             builder.AppendLine($"var {pVar} = {init};");
             builder.AppendLine($"if ({dictExpr}.TryGetValue(\"{key}\", out var {pRaw}) &&");
             builder.AppendLine($"    {pRaw} != global::Microsoft.Extensions.Primitives.StringValues.Empty)");
-            builder.BeginBlock();
+            builder.BeginScope();
             if (String.IsNullOrEmpty(converterMethod))
             {
                 builder.AppendLine($"{pVar} = {pRaw};");
@@ -608,7 +608,7 @@ internal static class FunctionSourceBuilder
                     ? $"!{StringConverterType}.TryToEnum<{baseType}>({AsSpanMethod}({pRaw}.ToString()), out var {pVar}tmp)"
                     : $"!{StringConverterType}.{converterMethod}({AsSpanMethod}({pRaw}.ToString()), out var {pVar}tmp)";
                 builder.AppendLine($"if ({converterCall})");
-                builder.BeginBlock();
+                builder.BeginScope();
                 if (hasFilter)
                 {
                     builder.AppendLine($"ctx.Result = new {BadRequestResultType}($\"Invalid parameter: {key}\");");
@@ -618,11 +618,11 @@ internal static class FunctionSourceBuilder
                 {
                     builder.AppendLine($"return new {BadRequestResultType}($\"Invalid parameter: {key}\");");
                 }
-                builder.EndBlock();
+                builder.EndScope();
                 builder.AppendLine($"{pVar} = {pVar}tmp;");
             }
 
-            builder.EndBlock();
+            builder.EndScope();
             builder.NewLine();
         }
         else
@@ -634,9 +634,9 @@ internal static class FunctionSourceBuilder
                 builder.AppendLine($"var {pVar} = {init};");
                 builder.AppendLine($"if ({dictExpr}.TryGetValue(\"{key}\", out var {pRaw}) &&");
                 builder.AppendLine($"    {pRaw} != global::Microsoft.Extensions.Primitives.StringValues.Empty)");
-                builder.BeginBlock();
+                builder.BeginScope();
                 builder.AppendLine($"{pVar} = {pRaw}!;");
-                builder.EndBlock();
+                builder.EndScope();
                 builder.NewLine();
             }
             else
@@ -645,13 +645,13 @@ internal static class FunctionSourceBuilder
                 builder.AppendLine($"var {pVar} = {init};");
                 builder.AppendLine($"if ({dictExpr}.TryGetValue(\"{key}\", out var {pRaw}) &&");
                 builder.AppendLine($"    {pRaw} != global::Microsoft.Extensions.Primitives.StringValues.Empty)");
-                builder.BeginBlock();
+                builder.BeginScope();
                 var isEnum = converterMethod == "TryToEnum";
                 var converterCall = isEnum
                     ? $"!{StringConverterType}.TryToEnum<{typeName}>({AsSpanMethod}({pRaw}.ToString()), out {pVar})"
                     : $"!{StringConverterType}.{converterMethod}({AsSpanMethod}({pRaw}.ToString()), out {pVar})";
                 builder.AppendLine($"if ({converterCall})");
-                builder.BeginBlock();
+                builder.BeginScope();
                 if (hasFilter)
                 {
                     builder.AppendLine($"ctx.Result = new {BadRequestResultType}($\"Invalid parameter: {key}\");");
@@ -661,8 +661,8 @@ internal static class FunctionSourceBuilder
                 {
                     builder.AppendLine($"return new {BadRequestResultType}($\"Invalid parameter: {key}\");");
                 }
-                builder.EndBlock();
-                builder.EndBlock();
+                builder.EndScope();
+                builder.EndScope();
                 builder.NewLine();
             }
         }
@@ -685,7 +685,7 @@ internal static class FunctionSourceBuilder
             var init = defaultLiteral is not null ? $"({typeName}){defaultLiteral}" : $"({typeName})null";
             builder.AppendLine($"var {pVar} = {init};");
             builder.AppendLine($"if (req.RouteValues.TryGetValue(\"{key}\", out var {pRaw}obj) && {pRaw}obj is string {pRaw})");
-            builder.BeginBlock();
+            builder.BeginScope();
             if (String.IsNullOrEmpty(converterMethod))
             {
                 builder.AppendLine($"{pVar} = {pRaw};");
@@ -697,7 +697,7 @@ internal static class FunctionSourceBuilder
                     ? $"!{StringConverterType}.TryToEnum<{baseType}>({AsSpanMethod}({pRaw}), out var {pVar}tmp)"
                     : $"!{StringConverterType}.{converterMethod}({AsSpanMethod}({pRaw}), out var {pVar}tmp)";
                 builder.AppendLine($"if ({converterCall})");
-                builder.BeginBlock();
+                builder.BeginScope();
                 if (hasFilter)
                 {
                     builder.AppendLine($"ctx.Result = new {BadRequestResultType}($\"Invalid parameter: {key}\");");
@@ -707,11 +707,11 @@ internal static class FunctionSourceBuilder
                 {
                     builder.AppendLine($"return new {BadRequestResultType}($\"Invalid parameter: {key}\");");
                 }
-                builder.EndBlock();
+                builder.EndScope();
                 builder.AppendLine($"{pVar} = {pVar}tmp;");
             }
 
-            builder.EndBlock();
+            builder.EndScope();
             builder.NewLine();
         }
         else
@@ -719,7 +719,7 @@ internal static class FunctionSourceBuilder
             var init = defaultLiteral is not null ? $"({typeName}){defaultLiteral}" : $"default({typeName})";
             builder.AppendLine($"var {pVar} = {init};");
             builder.AppendLine($"if (req.RouteValues.TryGetValue(\"{key}\", out var {pRaw}obj) && {pRaw}obj is string {pRaw})");
-            builder.BeginBlock();
+            builder.BeginScope();
             if (String.IsNullOrEmpty(converterMethod))
             {
                 builder.AppendLine($"{pVar} = {pRaw}!;");
@@ -731,7 +731,7 @@ internal static class FunctionSourceBuilder
                     ? $"!{StringConverterType}.TryToEnum<{typeName}>({AsSpanMethod}({pRaw}), out {pVar})"
                     : $"!{StringConverterType}.{converterMethod}({AsSpanMethod}({pRaw}), out {pVar})";
                 builder.AppendLine($"if ({converterCall})");
-                builder.BeginBlock();
+                builder.BeginScope();
                 if (hasFilter)
                 {
                     builder.AppendLine($"ctx.Result = new {BadRequestResultType}($\"Invalid parameter: {key}\");");
@@ -741,10 +741,10 @@ internal static class FunctionSourceBuilder
                 {
                     builder.AppendLine($"return new {BadRequestResultType}($\"Invalid parameter: {key}\");");
                 }
-                builder.EndBlock();
+                builder.EndScope();
             }
 
-            builder.EndBlock();
+            builder.EndScope();
             builder.NewLine();
         }
     }
@@ -767,7 +767,7 @@ internal static class FunctionSourceBuilder
             builder.AppendLine($"var {pVar} = {init};");
             builder.AppendLine($"if (req.Headers.TryGetValue(\"{key}\", out var {pRaw}sv) &&");
             builder.AppendLine($"    {pRaw}sv != global::Microsoft.Extensions.Primitives.StringValues.Empty)");
-            builder.BeginBlock();
+            builder.BeginScope();
             builder.AppendLine($"var {pRaw} = {pRaw}sv.ToString();");
             if (String.IsNullOrEmpty(converterMethod))
             {
@@ -780,7 +780,7 @@ internal static class FunctionSourceBuilder
                     ? $"!{StringConverterType}.TryToEnum<{baseType}>({AsSpanMethod}({pRaw}), out var {pVar}tmp)"
                     : $"!{StringConverterType}.{converterMethod}({AsSpanMethod}({pRaw}), out var {pVar}tmp)";
                 builder.AppendLine($"if ({converterCall})");
-                builder.BeginBlock();
+                builder.BeginScope();
                 if (hasFilter)
                 {
                     builder.AppendLine($"ctx.Result = new {BadRequestResultType}($\"Invalid parameter: {key}\");");
@@ -790,11 +790,11 @@ internal static class FunctionSourceBuilder
                 {
                     builder.AppendLine($"return new {BadRequestResultType}($\"Invalid parameter: {key}\");");
                 }
-                builder.EndBlock();
+                builder.EndScope();
                 builder.AppendLine($"{pVar} = {pVar}tmp;");
             }
 
-            builder.EndBlock();
+            builder.EndScope();
             builder.NewLine();
         }
         else
@@ -805,7 +805,7 @@ internal static class FunctionSourceBuilder
             builder.AppendLine($"var {pVar} = {init};");
             builder.AppendLine($"if (req.Headers.TryGetValue(\"{key}\", out var {pRaw}sv) &&");
             builder.AppendLine($"    {pRaw}sv != global::Microsoft.Extensions.Primitives.StringValues.Empty)");
-            builder.BeginBlock();
+            builder.BeginScope();
             builder.AppendLine($"var {pRaw} = {pRaw}sv.ToString();");
             if (String.IsNullOrEmpty(converterMethod))
             {
@@ -818,7 +818,7 @@ internal static class FunctionSourceBuilder
                     ? $"!{StringConverterType}.TryToEnum<{typeName}>({AsSpanMethod}({pRaw}), out {pVar})"
                     : $"!{StringConverterType}.{converterMethod}({AsSpanMethod}({pRaw}), out {pVar})";
                 builder.AppendLine($"if ({converterCall})");
-                builder.BeginBlock();
+                builder.BeginScope();
                 if (hasFilter)
                 {
                     builder.AppendLine($"ctx.Result = new {BadRequestResultType}($\"Invalid parameter: {key}\");");
@@ -828,10 +828,10 @@ internal static class FunctionSourceBuilder
                 {
                     builder.AppendLine($"return new {BadRequestResultType}($\"Invalid parameter: {key}\");");
                 }
-                builder.EndBlock();
+                builder.EndScope();
             }
 
-            builder.EndBlock();
+            builder.EndScope();
             builder.NewLine();
         }
     }
@@ -940,33 +940,5 @@ internal static class FunctionSourceBuilder
         }
 
         return char.ToUpperInvariant(name[0]) + name.Substring(1);
-    }
-}
-
-internal static class SourceBuilderExtensions
-{
-    public static void AppendLine(this SourceBuilder builder, string line)
-    {
-        builder.Indent().Append(line).NewLine();
-    }
-
-    public static void BeginBlock(this SourceBuilder builder)
-    {
-        builder.Indent().Append("{").NewLine();
-        builder.IndentLevel++;
-    }
-
-    public static void EndBlock(this SourceBuilder builder, bool semicolon = false)
-    {
-        builder.IndentLevel--;
-        builder.Indent();
-        if (semicolon)
-        {
-            builder.Append("};").NewLine();
-        }
-        else
-        {
-            builder.Append("}").NewLine();
-        }
     }
 }

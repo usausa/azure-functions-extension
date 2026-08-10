@@ -1,12 +1,9 @@
 namespace AzureFunctionsExtension.Generator;
 
-using System.Text;
-
 using AzureFunctionsExtension.Generator.Models;
 
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
-using Microsoft.CodeAnalysis.Text;
 
 using SourceGenerateHelper;
 
@@ -46,9 +43,7 @@ public sealed class FunctionGenerator : IIncrementalGenerator
         var builder = new SourceBuilder();
 
         FunctionSourceBuilder.BuildShared(builder, model);
-        context.AddSource(
-            MakeFilename(model.Namespace, model.ClassName, "__shared__"),
-            SourceText.From(builder.ToString(), Encoding.UTF8));
+        context.AddSource(HintNameBuilder.Build(model.Namespace, model.ClassName, "__shared__"), builder);
 
         foreach (var handler in model.Handlers)
         {
@@ -57,18 +52,7 @@ public sealed class FunctionGenerator : IIncrementalGenerator
             builder.Clear();
             FunctionSourceBuilder.Build(builder, model, handler);
 
-            var filename = MakeFilename(model.Namespace, model.ClassName, handler.MethodName);
-            context.AddSource(filename, SourceText.From(builder.ToString(), Encoding.UTF8));
+            context.AddSource(HintNameBuilder.Build(model.Namespace, model.ClassName, handler.MethodName), builder);
         }
-    }
-
-    private static string MakeFilename(string ns, string className, string methodName)
-    {
-        if (String.IsNullOrEmpty(ns))
-        {
-            return $"{className}__{methodName}.g.cs";
-        }
-
-        return $"{ns}.{className}__{methodName}.g.cs";
     }
 }

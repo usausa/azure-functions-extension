@@ -1,0 +1,8 @@
+{
+  "profiles": {
+    "AzureFunctionsExtension.Generator": {
+      "commandName": "DebugRoslynComponent",
+      "targetProject": "..\\AzureFunctionsExtension.Example\\AzureFunctionsExtension.Example.csproj"
+    }
+  }
+}

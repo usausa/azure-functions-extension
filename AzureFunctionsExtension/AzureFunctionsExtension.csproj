@@ -30,7 +30,15 @@
     <PackageReference Include="Microsoft.Azure.Functions.Worker" Version="2.52.0" />
     <PackageReference Include="Microsoft.Azure.Functions.Worker.Extensions.Http.AspNetCore" Version="2.1.1" />
     <PackageReference Include="Microsoft.Extensions.DependencyInjection" Version="10.0.10" />
-    <PackageReference Include="SourceGenerateHelper" Version="1.18.0" GeneratePathProperty="true" PrivateAssets="all" />
+    <PackageReference Include="SourceGenerateHelper" Version="1.19.0" GeneratePathProperty="true" PrivateAssets="all" />
   </ItemGroup>
 
+
+  <ItemGroup>
+    <!-- Build order only. PackBuildOutputs reads the generator's bin directory directly, so packing
+         this project on its own fails unless the generator happened to be built first. This makes
+         the ordering explicit. ReferenceOutputAssembly keeps the generator off this project's
+         compile references, PrivateAssets keeps it out of the package dependencies. -->
+    <ProjectReference Include="..\AzureFunctionsExtension.Generator\AzureFunctionsExtension.Generator.csproj" ReferenceOutputAssembly="false" PrivateAssets="all" />
+  </ItemGroup>
 </Project>
