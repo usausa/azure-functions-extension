@@ -13,8 +13,8 @@
     <File Path=".gitignore" />
     <File Path="AGENTS.md" />
     <File Path="Analyzers.ruleset" />
-    <File Path="AzureFunctionsExtension.props" />
     <File Path="AzureFunctionsExtension.sln.DotSettings" />
+    <File Path="AzureFunctionsExtension.targets" />
     <File Path="CLAUDE.md" />
     <File Path="CodeCoverage.runsettings" />
     <File Path="Directory.Build.props" />
