@@ -155,7 +155,7 @@ internal static class FunctionModelBuilder
             symbol.IsValueType,
             functionType,
             new EquatableArray<TypeRefModel>(sortedFilters),
-            new EquatableArray<HandlerModel>(handlers.ToArray())));
+            new EquatableArray<HandlerModel>(handlers)));
     }
 
     private static bool IsFilterAttribute(AttributeData attr)
@@ -361,7 +361,7 @@ internal static class FunctionModelBuilder
             isAsync,
             resultType,
             responseType,
-            new EquatableArray<ParameterModel>(parameters.ToArray()),
+            new EquatableArray<ParameterModel>(parameters),
             httpMethod,
             route,
             authorizationLevel,
