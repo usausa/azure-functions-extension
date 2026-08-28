@@ -16,6 +16,7 @@
     <ItemGroup>
       <TfmSpecificPackageFile Include="..\AzureFunctionsExtension.Generator\bin\$(Configuration)\netstandard2.0\AzureFunctionsExtension.Generator.dll" Pack="true" PackagePath="analyzers/dotnet/cs" Visible="false" />
       <TfmSpecificPackageFile Include="$(PKGSourceGenerateHelper)\lib\netstandard2.0\SourceGenerateHelper.dll" Pack="true" PackagePath="analyzers/dotnet/cs" Visible="false" />
+      <TfmSpecificPackageFile Include="..\AzureFunctionsExtension.props" Pack="true" PackagePath="buildTransitive\AzureFunctionsExtension.props" Visible="false" />
       <TfmSpecificPackageFile Include="..\AzureFunctionsExtension.targets" Pack="true" PackagePath="buildTransitive\AzureFunctionsExtension.targets" Visible="false" />
     </ItemGroup>
   </Target>

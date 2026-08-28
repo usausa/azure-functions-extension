@@ -7,7 +7,7 @@ internal static class Diagnostics
     // Class definition (AFE0001-AFE0005)
     public static DiagnosticDescriptor NotPartialClass { get; } = new(
         id: "AFE0001",
-        title: "[AzureFunction] class must be partial",
+        title: "Class must be partial",
         messageFormat: "[AzureFunction] class must be partial. type=[{0}]",
         category: "Usage",
         defaultSeverity: DiagnosticSeverity.Error,
@@ -15,7 +15,7 @@ internal static class Diagnostics
 
     public static DiagnosticDescriptor GenericClass { get; } = new(
         id: "AFE0002",
-        title: "[AzureFunction] class must not be generic",
+        title: "Class must not be generic",
         messageFormat: "[AzureFunction] class must not be generic. type=[{0}]",
         category: "Usage",
         defaultSeverity: DiagnosticSeverity.Error,
@@ -23,15 +23,15 @@ internal static class Diagnostics
 
     public static DiagnosticDescriptor NestedClass { get; } = new(
         id: "AFE0003",
-        title: "[AzureFunction] class must be a top-level type",
-        messageFormat: "[AzureFunction] class must be a top-level type. type=[{0}]",
+        title: "Class must not be nested",
+        messageFormat: "[AzureFunction] class must not be nested. type=[{0}]",
         category: "Usage",
         defaultSeverity: DiagnosticSeverity.Error,
         isEnabledByDefault: true);
 
     public static DiagnosticDescriptor RecordClass { get; } = new(
         id: "AFE0004",
-        title: "[AzureFunction] record is not supported",
+        title: "Record is not supported",
         messageFormat: "[AzureFunction] record is not supported. type=[{0}]",
         category: "Usage",
         defaultSeverity: DiagnosticSeverity.Error,
@@ -39,7 +39,7 @@ internal static class Diagnostics
 
     public static DiagnosticDescriptor AbstractClass { get; } = new(
         id: "AFE0005",
-        title: "[AzureFunction] class must not be abstract",
+        title: "Class must not be abstract",
         messageFormat: "[AzureFunction] class must not be abstract. type=[{0}]",
         category: "Usage",
         defaultSeverity: DiagnosticSeverity.Error,
@@ -48,7 +48,7 @@ internal static class Diagnostics
     // Filter (AFE0006)
     public static DiagnosticDescriptor FilterNotImplementIFunctionFilter { get; } = new(
         id: "AFE0006",
-        title: "Filter type does not implement IFunctionFilter",
+        title: "Invalid filter type",
         messageFormat: "Filter type does not implement IFunctionFilter. type=[{0}]",
         category: "Usage",
         defaultSeverity: DiagnosticSeverity.Error,
@@ -57,7 +57,7 @@ internal static class Diagnostics
     // Function (AFE0007-AFE0010)
     public static DiagnosticDescriptor MultipleHandlerAttributes { get; } = new(
         id: "AFE0007",
-        title: "Function has multiple endpoint attributes",
+        title: "Multiple endpoint attributes",
         messageFormat: "Function has multiple endpoint attributes. function=[{0}]",
         category: "Usage",
         defaultSeverity: DiagnosticSeverity.Error,
@@ -66,23 +66,23 @@ internal static class Diagnostics
     public static DiagnosticDescriptor OverloadedHandler { get; } = new(
         id: "AFE0008",
         title: "Function is overloaded",
-        messageFormat: "Function is overloaded; function names must be unique. function=[{0}]",
+        messageFormat: "Function name is not unique. function=[{0}]",
         category: "Usage",
         defaultSeverity: DiagnosticSeverity.Error,
         isEnabledByDefault: true);
 
     public static DiagnosticDescriptor InvalidBindingOnNonHttpHandler { get; } = new(
         id: "AFE0009",
-        title: "HTTP-only binding attribute used on non-HTTP function",
-        messageFormat: "HTTP-only binding attribute used on non-HTTP function. function=[{0}]",
+        title: "Invalid binding on non-HTTP function",
+        messageFormat: "HTTP-only binding on a non-HTTP function. function=[{0}]",
         category: "Usage",
         defaultSeverity: DiagnosticSeverity.Error,
         isEnabledByDefault: true);
 
     public static DiagnosticDescriptor MultipleTriggerPayloads { get; } = new(
         id: "AFE0010",
-        title: "Function has multiple trigger payload parameters",
-        messageFormat: "Timer/Queue function has multiple trigger payload parameters. function=[{0}]",
+        title: "Multiple trigger payloads",
+        messageFormat: "Multiple trigger payload parameters. function=[{0}]",
         category: "Usage",
         defaultSeverity: DiagnosticSeverity.Error,
         isEnabledByDefault: true);
@@ -90,7 +90,7 @@ internal static class Diagnostics
     // Parameter (AFE0011-AFE0012)
     public static DiagnosticDescriptor MultipleBindingAttributes { get; } = new(
         id: "AFE0011",
-        title: "Parameter has multiple binding attributes",
+        title: "Multiple binding attributes",
         messageFormat: "Parameter has multiple binding attributes. function=[{0}], parameter=[{1}]",
         category: "Usage",
         defaultSeverity: DiagnosticSeverity.Error,
@@ -98,8 +98,8 @@ internal static class Diagnostics
 
     public static DiagnosticDescriptor UnsupportedBindingType { get; } = new(
         id: "AFE0012",
-        title: "Unsupported parameter type for binding",
-        messageFormat: "Parameter type for binding is unsupported. type=[{0}]",
+        title: "Unsupported binding type",
+        messageFormat: "Binding type is not supported. type=[{0}]",
         category: "Usage",
         defaultSeverity: DiagnosticSeverity.Error,
         isEnabledByDefault: true);
@@ -107,8 +107,8 @@ internal static class Diagnostics
     // Route (AFE0013)
     public static DiagnosticDescriptor MissingRouteParameter { get; } = new(
         id: "AFE0013",
-        title: "Route template variable not bound with [FromRoute]",
-        messageFormat: "Route template variable is not bound with [FromRoute]. variable=[{0}], function=[{1}]",
+        title: "Missing route parameter",
+        messageFormat: "Route variable is not bound with [FromRoute]. variable=[{0}], function=[{1}]",
         category: "Usage",
         defaultSeverity: DiagnosticSeverity.Warning,
         isEnabledByDefault: true);
