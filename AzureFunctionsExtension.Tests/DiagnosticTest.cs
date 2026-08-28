@@ -2,14 +2,14 @@ namespace AzureFunctionsExtension.Tests;
 
 using static AzureFunctionsExtension.Tests.CompilationHelper;
 
-public sealed class DiagnosticsTests
+public class DiagnosticTest
 {
-    //--------------------------------------------------------------------------------
+    // ------------------------------------------------------------
     // AFE0001
-    //--------------------------------------------------------------------------------
+    // ------------------------------------------------------------
 
     [Fact]
-    public void ReportsDiagnosticWhenClassIsNotPartial()
+    public void Afe0001ClassIsNotPartialEmitsDiagnostic()
     {
         const string source =
             """
@@ -31,12 +31,12 @@ public sealed class DiagnosticsTests
         Assert.Contains(result.Diagnostics, static d => d.Id == "AFE0001");
     }
 
-    //--------------------------------------------------------------------------------
+    // ------------------------------------------------------------
     // AFE0002
-    //--------------------------------------------------------------------------------
+    // ------------------------------------------------------------
 
     [Fact]
-    public void ReportsDiagnosticWhenClassIsGeneric()
+    public void Afe0002ClassIsGenericEmitsDiagnostic()
     {
         const string source =
             """
@@ -58,12 +58,12 @@ public sealed class DiagnosticsTests
         Assert.Contains(result.Diagnostics, static d => d.Id == "AFE0002");
     }
 
-    //--------------------------------------------------------------------------------
+    // ------------------------------------------------------------
     // AFE0003
-    //--------------------------------------------------------------------------------
+    // ------------------------------------------------------------
 
     [Fact]
-    public void ReportsDiagnosticWhenClassIsNested()
+    public void Afe0003ClassIsNestedEmitsDiagnostic()
     {
         const string source =
             """
@@ -88,12 +88,12 @@ public sealed class DiagnosticsTests
         Assert.Contains(result.Diagnostics, static d => d.Id == "AFE0003");
     }
 
-    //--------------------------------------------------------------------------------
+    // ------------------------------------------------------------
     // AFE0004
-    //--------------------------------------------------------------------------------
+    // ------------------------------------------------------------
 
     [Fact]
-    public void ReportsDiagnosticWhenTypeIsRecord()
+    public void Afe0004TypeIsRecordEmitsDiagnostic()
     {
         const string source =
             """
@@ -115,12 +115,12 @@ public sealed class DiagnosticsTests
         Assert.Contains(result.Diagnostics, static d => d.Id == "AFE0004");
     }
 
-    //--------------------------------------------------------------------------------
+    // ------------------------------------------------------------
     // AFE0005
-    //--------------------------------------------------------------------------------
+    // ------------------------------------------------------------
 
     [Fact]
-    public void ReportsDiagnosticWhenClassIsAbstract()
+    public void Afe0005ClassIsAbstractEmitsDiagnostic()
     {
         const string source =
             """
@@ -142,12 +142,12 @@ public sealed class DiagnosticsTests
         Assert.Contains(result.Diagnostics, static d => d.Id == "AFE0005");
     }
 
-    //--------------------------------------------------------------------------------
+    // ------------------------------------------------------------
     // AFE0006
-    //--------------------------------------------------------------------------------
+    // ------------------------------------------------------------
 
     [Fact]
-    public void ReportsDiagnosticWhenFilterTypeDoesNotImplementIFunctionFilter()
+    public void Afe0006FilterTypeDoesNotImplementIFunctionFilterEmitsDiagnostic()
     {
         const string source =
             """
@@ -174,12 +174,12 @@ public sealed class DiagnosticsTests
         Assert.Contains(result.Diagnostics, static d => d.Id == "AFE0006");
     }
 
-    //--------------------------------------------------------------------------------
+    // ------------------------------------------------------------
     // AFE0007
-    //--------------------------------------------------------------------------------
+    // ------------------------------------------------------------
 
     [Fact]
-    public void ReportsDiagnosticWhenHandlerHasMultipleEndpointAttributes()
+    public void Afe0007HandlerHasMultipleEndpointAttributesEmitsDiagnostic()
     {
         const string source =
             """
@@ -202,12 +202,12 @@ public sealed class DiagnosticsTests
         Assert.Contains(result.Diagnostics, static d => d.Id == "AFE0007");
     }
 
-    //--------------------------------------------------------------------------------
+    // ------------------------------------------------------------
     // AFE0008
-    //--------------------------------------------------------------------------------
+    // ------------------------------------------------------------
 
     [Fact]
-    public void ReportsDiagnosticWhenHandlerIsOverloaded()
+    public void Afe0008HandlerIsOverloadedEmitsDiagnostic()
     {
         const string source =
             """
@@ -232,12 +232,12 @@ public sealed class DiagnosticsTests
         Assert.Contains(result.Diagnostics, static d => d.Id == "AFE0008");
     }
 
-    //--------------------------------------------------------------------------------
+    // ------------------------------------------------------------
     // AFE0009
-    //--------------------------------------------------------------------------------
+    // ------------------------------------------------------------
 
     [Fact]
-    public void ReportsDiagnosticWhenHttpOnlyBindingUsedOnNonHttpHandler()
+    public void Afe0009HttpOnlyBindingUsedOnNonHttpHandlerEmitsDiagnostic()
     {
         const string source =
             """
@@ -260,12 +260,12 @@ public sealed class DiagnosticsTests
         Assert.Contains(result.Diagnostics, static d => d.Id == "AFE0009");
     }
 
-    //--------------------------------------------------------------------------------
+    // ------------------------------------------------------------
     // AFE0010
-    //--------------------------------------------------------------------------------
+    // ------------------------------------------------------------
 
     [Fact]
-    public void ReportsDiagnosticWhenQueueHandlerHasMultipleTriggerPayloads()
+    public void Afe0010QueueHandlerHasMultipleTriggerPayloadsEmitsDiagnostic()
     {
         const string source =
             """
@@ -289,7 +289,7 @@ public sealed class DiagnosticsTests
     }
 
     [Fact]
-    public void DoesNotReportMultipleTriggerPayloadsForSingleTriggerHandler()
+    public void Afe0010MultipleTriggerPayloadsForSingleTriggerHandlerEmitsNoDiagnostic()
     {
         const string source =
             """
@@ -312,12 +312,12 @@ public sealed class DiagnosticsTests
         Assert.DoesNotContain(result.Diagnostics, static d => d.Id == "AFE0010");
     }
 
-    //--------------------------------------------------------------------------------
+    // ------------------------------------------------------------
     // AFE0011
-    //--------------------------------------------------------------------------------
+    // ------------------------------------------------------------
 
     [Fact]
-    public void ReportsDiagnosticWhenMultipleBindingAttributesAreApplied()
+    public void Afe0011MultipleBindingAttributesAreAppliedEmitsDiagnostic()
     {
         const string source =
             """
@@ -342,12 +342,12 @@ public sealed class DiagnosticsTests
         Assert.Contains(result.Diagnostics, static d => d.Id == "AFE0011");
     }
 
-    //--------------------------------------------------------------------------------
+    // ------------------------------------------------------------
     // AFE0012
-    //--------------------------------------------------------------------------------
+    // ------------------------------------------------------------
 
     [Fact]
-    public void ReportsDiagnosticWhenTextBindingTypeIsUnsupported()
+    public void Afe0012TextBindingTypeIsUnsupportedEmitsDiagnostic()
     {
         const string source =
             """
@@ -377,12 +377,12 @@ public sealed class DiagnosticsTests
         Assert.Contains(result.Diagnostics, static d => d.Id == "AFE0012");
     }
 
-    //--------------------------------------------------------------------------------
+    // ------------------------------------------------------------
     // AFE0013
-    //--------------------------------------------------------------------------------
+    // ------------------------------------------------------------
 
     [Fact]
-    public void ReportsDiagnosticWhenRouteParameterIsNotBound()
+    public void Afe0013RouteParameterIsNotBoundEmitsDiagnostic()
     {
         const string source =
             """
@@ -408,7 +408,7 @@ public sealed class DiagnosticsTests
     }
 
     [Fact]
-    public void DoesNotReportMissingRouteParameterWhenRouteVariableIsBound()
+    public void Afe0013MissingRouteParameterWhenRouteVariableIsBoundEmitsNoDiagnostic()
     {
         const string source =
             """

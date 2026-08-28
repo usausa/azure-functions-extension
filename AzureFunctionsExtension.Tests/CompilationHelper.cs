@@ -50,4 +50,7 @@ internal static class CompilationHelper
         ImmutableArray<Diagnostic> Diagnostics,
         IReadOnlyDictionary<string, string> Sources,
         string GeneratedCode);
+
+    public static IncrementalRunResult RunIncremental(string source, string addedSource) =>
+        Runner.WithTracking().RunIncremental(source, addedSource);
 }
