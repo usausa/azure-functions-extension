@@ -82,7 +82,7 @@ internal static class Diagnostics
     public static DiagnosticDescriptor MultipleTriggerPayloads { get; } = new(
         id: "AFE0010",
         title: "Multiple trigger payloads",
-        messageFormat: "Multiple trigger payload parameters. function=[{0}]",
+        messageFormat: "[TimerEndpoint]/[QueueEndpoint] function has multiple payload parameters. function=[{0}]",
         category: "Usage",
         defaultSeverity: DiagnosticSeverity.Error,
         isEnabledByDefault: true);

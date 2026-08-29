@@ -23,7 +23,7 @@
 | AFE0007 | ❌ Error | Function has multiple endpoint attributes | Leave a single endpoint attribute on the function |
 | AFE0008 | ❌ Error | Function name is not unique because the function is overloaded | Rename the function so that each function name is unique |
 | AFE0009 | ❌ Error | HTTP-only binding attribute is used on a non-HTTP function | Remove the HTTP-only binding, or use an HTTP trigger |
-| AFE0010 | ❌ Error | Timer/Queue function has multiple trigger payload parameters | Leave a single trigger payload parameter |
+| AFE0010 | ❌ Error | `[TimerEndpoint]` / `[QueueEndpoint]` function has multiple trigger payload parameters | Leave a single trigger payload parameter |
 
 ## Parameter
 
