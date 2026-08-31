@@ -101,7 +101,7 @@ internal static class FunctionModelBuilder
         foreach (var filterAttr in filterAttrs)
         {
             var filterTypeArg = filterAttr.Attr.AttributeClass!.TypeArguments[0];
-            if (filterTypeArg is INamedTypeSymbol filterTypeSym && !ImplementsInterface(filterTypeSym, IFunctionFilterFullName))
+            if ((filterTypeArg is INamedTypeSymbol filterTypeSym) && !ImplementsInterface(filterTypeSym, IFunctionFilterFullName))
             {
                 diagnostics.Add(new DiagnosticInfo(
                     Diagnostics.FilterNotImplementIFunctionFilter,

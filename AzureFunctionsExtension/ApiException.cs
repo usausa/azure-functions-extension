@@ -1,6 +1,5 @@
 namespace AzureFunctionsExtension;
 
-#pragma warning disable CA1032
 public sealed class ApiException : Exception
 {
     // ReSharper disable once UnusedAutoPropertyAccessor.Global
@@ -17,4 +16,3 @@ public sealed class ApiException : Exception
         StatusCode = statusCode;
     }
 }
-#pragma warning restore CA1032

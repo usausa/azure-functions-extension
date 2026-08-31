@@ -4,6 +4,7 @@ using AzureFunctionsExtension.Mvc;
 
 using Microsoft.AspNetCore.Mvc;
 
+#pragma warning disable CA1054
 public static class Results
 {
     public static IActionResult Ok() => new OkResult();
@@ -30,3 +31,4 @@ public static class Results
 
     public static IActionResult StatusCode(int statusCode, object body) => new ObjectResult(body) { StatusCode = statusCode };
 }
+#pragma warning restore CA1054

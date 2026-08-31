@@ -939,6 +939,6 @@ internal static class FunctionSourceBuilder
             return name;
         }
 
-        return char.ToUpperInvariant(name[0]) + name.Substring(1);
+        return Char.ToUpperInvariant(name[0]) + name.Substring(1);
     }
 }
