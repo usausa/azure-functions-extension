@@ -5,7 +5,7 @@ using AzureFunctionsExtension.Example.Functions;
 public sealed class FilterFunctionHandlerTests
 {
     [Fact]
-    public async Task Ping_Handler_RunsThroughFilterPipelineAndReturns200()
+    public async Task PingHandlerRunsThroughFilterPipelineAndReturns200()
     {
         var services = HandlerTestHost.CreateServices();
         var req = HandlerTestHost.CreateRequest(services);

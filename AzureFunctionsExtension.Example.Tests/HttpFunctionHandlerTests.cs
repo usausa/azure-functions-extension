@@ -10,7 +10,7 @@ using Microsoft.Extensions.Primitives;
 public sealed class HttpFunctionHandlerTests
 {
     [Fact]
-    public async Task Query_Handler_ValidValues_Returns200WithSum()
+    public async Task QueryHandlerValidValuesReturns200WithSum()
     {
         var services = HandlerTestHost.CreateServices();
         var req = HandlerTestHost.CreateRequest(
@@ -26,7 +26,7 @@ public sealed class HttpFunctionHandlerTests
     }
 
     [Fact]
-    public async Task Query_Handler_InvalidScalar_Returns400()
+    public async Task QueryHandlerInvalidScalarReturns400()
     {
         var services = HandlerTestHost.CreateServices();
         var req = HandlerTestHost.CreateRequest(
@@ -39,7 +39,7 @@ public sealed class HttpFunctionHandlerTests
     }
 
     [Fact]
-    public async Task Array_Handler_Returns200WithSum()
+    public async Task ArrayHandlerReturns200WithSum()
     {
         var services = HandlerTestHost.CreateServices();
         var req = HandlerTestHost.CreateRequest(
@@ -55,7 +55,7 @@ public sealed class HttpFunctionHandlerTests
     }
 
     [Fact]
-    public async Task Body_Handler_ValidBody_Returns200()
+    public async Task BodyHandlerValidBodyReturns200()
     {
         var services = HandlerTestHost.CreateServices();
         var json = HandlerTestHost.Json(new { id = 1, name = "widget", flag = true, dateTime = "2024-01-15T00:00:00" });
@@ -71,7 +71,7 @@ public sealed class HttpFunctionHandlerTests
     }
 
     [Fact]
-    public async Task Body_Handler_ValidationFails_Returns400()
+    public async Task BodyHandlerValidationFailsReturns400()
     {
         var services = HandlerTestHost.CreateServices();
         var json = HandlerTestHost.Json(new { id = 1, name = string.Empty }); // name is [Required]
@@ -83,7 +83,7 @@ public sealed class HttpFunctionHandlerTests
     }
 
     [Fact]
-    public async Task Body_Handler_InvalidJson_Returns400()
+    public async Task BodyHandlerInvalidJsonReturns400()
     {
         var services = HandlerTestHost.CreateServices();
         var req = HandlerTestHost.CreateRequest(services, body: "{ this is not json");
@@ -94,7 +94,7 @@ public sealed class HttpFunctionHandlerTests
     }
 
     [Fact]
-    public async Task GetItem_Handler_ExistingId_Returns200()
+    public async Task GetItemHandlerExistingIdReturns200()
     {
         var services = HandlerTestHost.CreateServices();
         var req = HandlerTestHost.CreateRequest(
@@ -110,7 +110,7 @@ public sealed class HttpFunctionHandlerTests
     }
 
     [Fact]
-    public async Task GetItem_Handler_NonPositiveId_Returns404()
+    public async Task GetItemHandlerNonPositiveIdReturns404()
     {
         var services = HandlerTestHost.CreateServices();
         var req = HandlerTestHost.CreateRequest(
@@ -123,7 +123,7 @@ public sealed class HttpFunctionHandlerTests
     }
 
     [Fact]
-    public async Task GetItem_Handler_InvalidId_Returns400()
+    public async Task GetItemHandlerInvalidIdReturns400()
     {
         var services = HandlerTestHost.CreateServices();
         var req = HandlerTestHost.CreateRequest(
@@ -136,7 +136,7 @@ public sealed class HttpFunctionHandlerTests
     }
 
     [Fact]
-    public async Task HeaderEcho_Handler_Returns200()
+    public async Task HeaderEchoHandlerReturns200()
     {
         var services = HandlerTestHost.CreateServices();
         var req = HandlerTestHost.CreateRequest(
@@ -149,7 +149,7 @@ public sealed class HttpFunctionHandlerTests
     }
 
     [Fact]
-    public async Task Lookup_Handler_UnknownName_Returns404()
+    public async Task LookupHandlerUnknownNameReturns404()
     {
         var services = HandlerTestHost.CreateServices();
         var req = HandlerTestHost.CreateRequest(
@@ -162,7 +162,7 @@ public sealed class HttpFunctionHandlerTests
     }
 
     [Fact]
-    public async Task Lookup_Handler_KnownName_Returns200()
+    public async Task LookupHandlerKnownNameReturns200()
     {
         var services = HandlerTestHost.CreateServices();
         var req = HandlerTestHost.CreateRequest(
@@ -175,7 +175,7 @@ public sealed class HttpFunctionHandlerTests
     }
 
     [Fact]
-    public async Task Greet_Handler_ResolvesServiceAndReturns200()
+    public async Task GreetHandlerResolvesServiceAndReturns200()
     {
         var services = HandlerTestHost.CreateServices();
         var json = HandlerTestHost.Json(new { name = "World" });

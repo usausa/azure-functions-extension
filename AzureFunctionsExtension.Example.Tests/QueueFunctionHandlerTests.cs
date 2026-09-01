@@ -6,7 +6,7 @@ public sealed class QueueFunctionHandlerTests
 {
     // [QueueEndpoint] + [FromTrigger] message + [FromServices] injection
     [Fact]
-    public Task ProcessMessage_Handler_ResolvesServiceAndCompletes()
+    public Task ProcessMessageHandlerResolvesServiceAndCompletes()
     {
         var services = HandlerTestHost.CreateServices();
 
