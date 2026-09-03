@@ -2,7 +2,7 @@ namespace AzureFunctionsExtension.Tests;
 
 using static AzureFunctionsExtension.Tests.CompilationHelper;
 
-public class DiagnosticTest
+public class DiagnosticTests
 {
     // ------------------------------------------------------------
     // AFE0001
