@@ -46,10 +46,12 @@ internal static class CompilationHelper
         Assert.True(errors.Length == 0, String.Join(Environment.NewLine, errors.Select(static x => x.ToString())));
     }
 
+    // ReSharper disable NotAccessedPositionalProperty.Global
     public sealed record GeneratorResult(
         ImmutableArray<Diagnostic> Diagnostics,
         IReadOnlyDictionary<string, string> Sources,
         string GeneratedCode);
+    // ReSharper restore NotAccessedPositionalProperty.Global
 
     public static IncrementalRunResult RunIncremental(string source, string addedSource) =>
         Runner.WithTracking().RunIncremental(source, addedSource);
