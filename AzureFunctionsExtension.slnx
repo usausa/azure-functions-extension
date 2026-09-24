@@ -16,7 +16,6 @@
     <File Path="AzureFunctionsExtension.sln.DotSettings" />
     <File Path="AzureFunctionsExtension.props" />
     <File Path="AzureFunctionsExtension.targets" />
-    <File Path="CLAUDE.md" />
     <File Path="CodeCoverage.runsettings" />
     <File Path="Diagnostics.md" />
     <File Path="Directory.Build.props" />
