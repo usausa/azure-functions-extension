@@ -9,7 +9,7 @@ public static class Results
 {
     public static IActionResult Ok() => new OkResult();
 
-    public static IActionResult Ok(object body) => new SystemTextJsonResult(body);
+    public static IActionResult Ok(object? body) => new SystemTextJsonResult(body);
 
     public static IActionResult Created(string uri, object? body = null) => new CreatedResult(uri, body);
 

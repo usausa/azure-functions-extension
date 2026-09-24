@@ -40,7 +40,7 @@ public sealed class PipelineCacheTests
         public sealed partial class AddedFunction
         {
             [HttpEndpoint("get", "added")]
-            public IActionResult Run()
+            public IActionResult Added()
             {
                 return new EmptyResult();
             }

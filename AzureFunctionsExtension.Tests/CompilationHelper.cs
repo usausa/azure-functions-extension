@@ -37,6 +37,20 @@ internal static class CompilationHelper
             result.AllGeneratedText);
     }
 
+    public static IReadOnlyList<string> GetProblemIds(string source) =>
+        [.. Runner.GetProblems(source).Select(static x => x.Id)];
+
+    public static IReadOnlyList<string> GetProblemIds(string source, IReadOnlyDictionary<string, string> properties)
+    {
+        var runner = Runner;
+        foreach (var pair in properties)
+        {
+            runner = runner.WithGlobalOption($"build_property.{pair.Key}", pair.Value);
+        }
+
+        return [.. runner.GetProblems(source).Select(static x => x.Id)];
+    }
+
     public static void AssertNoGeneratorErrors(GeneratorResult result)
     {
         var errors = result.Diagnostics

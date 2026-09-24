@@ -9,7 +9,7 @@ using Microsoft.Extensions.Options;
 
 public class SystemTextJsonResult : ActionResult
 {
-    public SystemTextJsonResult(object value)
+    public SystemTextJsonResult(object? value)
     {
         Value = value;
         StatusCode = StatusCodes.Status200OK;

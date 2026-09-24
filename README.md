@@ -197,9 +197,9 @@ public IActionResult Body([FromBody] BodyRequest request)
 
 A handler may return:
 
-* an `IActionResult` &mdash; returned as-is,
-* any other object &mdash; serialized as JSON with a `200 OK`,
-* `void` / `Task` &mdash; returns `200 OK` with no body.
+* an `IActionResult` &mdash; returned as-is
+* any other object &mdash; serialized as JSON with a `200 OK`
+* `void` / `Task` &mdash; returns `200 OK` with no body
 
 The `Results` helper creates common results:
 

@@ -1,7 +1,6 @@
 #pragma warning disable IDE0060, IDE0042, SA1313
 namespace AzureFunctionsExtension.Generator;
 
-using System.Globalization;
 using System.Text.RegularExpressions;
 
 using AzureFunctionsExtension.Generator.Models;
@@ -59,7 +58,7 @@ internal static class FunctionModelBuilder
                 Diagnostics.GenericClass, syntax.Identifier.GetLocation(), symbol.Name));
         }
 
-        if (symbol.ContainingType is not null)
+        if ((symbol.ContainingType is not null) || symbol.IsFileLocal)
         {
             return Results.Error<FunctionModel>(new DiagnosticInfo(
                 Diagnostics.NestedClass, syntax.Identifier.GetLocation(), symbol.Name));
@@ -105,7 +104,7 @@ internal static class FunctionModelBuilder
             {
                 diagnostics.Add(new DiagnosticInfo(
                     Diagnostics.FilterNotImplementIFunctionFilter,
-                    syntax.GetLocation(),
+                    filterAttr.Attr.ApplicationSyntaxReference?.GetSyntax().GetLocation() ?? syntax.Identifier.GetLocation(),
                     filterTypeSym.ToDisplayString(SymbolDisplayFormat.FullyQualifiedFormat)));
             }
         }
@@ -118,7 +117,8 @@ internal static class FunctionModelBuilder
         // クラスの各メソッドを走査してハンドラーモデルを構築する
         // Iterate class members to build handler models
         var handlers = new List<HandlerModel>();
-        var handlerNames = new HashSet<string>(StringComparer.Ordinal);
+        var handlerNames = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        var warnings = new List<DiagnosticInfo>();
         foreach (var member in symbol.GetMembers().OfType<IMethodSymbol>())
         {
             if ((member.MethodKind != MethodKind.Ordinary) || member.IsStatic)
@@ -126,7 +126,7 @@ internal static class FunctionModelBuilder
                 continue;
             }
 
-            var handlerResult = BuildHandlerModel(member, diagnostics);
+            var handlerResult = BuildHandlerModel(member, diagnostics, warnings);
             if (handlerResult is null)
             {
                 if (diagnostics.Count > 0)
@@ -137,8 +137,8 @@ internal static class FunctionModelBuilder
                 continue;
             }
 
-            // ハンドラー名 (= 生成される [Function] 名) は一意でなければならない。オーバーロードはエラー
-            // Handler names (= generated [Function] names) must be unique; overloads are an error
+            // ハンドラー名 (= 生成される [Function] 名) は大文字小文字を区別せずに一意でなければならない。オーバーロードはエラー
+            // Handler names (= generated [Function] names) must be unique ignoring case; overloads are an error
             if (!handlerNames.Add(handlerResult.MethodName))
             {
                 var loc = member.Locations.Length > 0 ? member.Locations[0] : null;
@@ -149,32 +149,54 @@ internal static class FunctionModelBuilder
             handlers.Add(handlerResult);
         }
 
-        return Results.Success(new FunctionModel(
+        for (var baseType = symbol.BaseType; baseType is not null; baseType = baseType.BaseType)
+        {
+            foreach (var member in baseType.GetMembers().OfType<IMethodSymbol>())
+            {
+                if ((member.MethodKind == MethodKind.Ordinary) && !member.IsStatic && member.GetAttributes().Any(static a => IsEndpointAttribute(a)))
+                {
+                    warnings.Add(new DiagnosticInfo(Diagnostics.BaseClassHandler, member.Locations.FirstOrDefault(), member.Name));
+                }
+            }
+        }
+
+        var model = new FunctionModel(
             ns,
             symbol.Name,
             symbol.IsValueType,
             functionType,
             new EquatableArray<TypeRefModel>(sortedFilters),
-            new EquatableArray<HandlerModel>(handlers)));
+            new EquatableArray<HandlerModel>(handlers));
+        return warnings.Count > 0
+            ? new Result<FunctionModel>(model, new EquatableArray<DiagnosticInfo>(warnings.ToArray()))
+            : Results.Success(model);
     }
 
-    private static bool IsFilterAttribute(AttributeData attr)
+    public static EquatableArray<FunctionNameModel> BuildFunctionNames(GeneratorAttributeSyntaxContext context)
     {
-        var attrClass = attr.AttributeClass;
-        if (attrClass is null)
+        var symbol = (INamedTypeSymbol)context.TargetSymbol;
+        var typeName = symbol.ToDisplayString(SymbolDisplayFormat.FullyQualifiedFormat);
+
+        var names = new List<FunctionNameModel>();
+        foreach (var member in symbol.GetMembers().OfType<IMethodSymbol>())
         {
-            return false;
+            if ((member.MethodKind == MethodKind.Ordinary) && !member.IsStatic && member.GetAttributes().Any(static a => IsEndpointAttribute(a)))
+            {
+                var loc = member.Locations.Length > 0 ? LocationInfo.CreateFrom(member.Locations[0]) : null;
+                names.Add(new FunctionNameModel(typeName, member.Name, loc));
+            }
         }
 
-        if (attrClass.IsGenericType)
-        {
-            var original = attrClass.OriginalDefinition;
-            var ns = original.ContainingNamespace?.ToDisplayString() ?? string.Empty;
-            return ns + "." + original.MetadataName == FilterAttributeName;
-        }
-
-        return false;
+        return new EquatableArray<FunctionNameModel>(names.ToArray());
     }
+
+    private static bool IsEndpointAttribute(AttributeData attr) =>
+        attr.AttributeClass.HasFullyQualifiedMetadataName(HttpEndpointAttributeName) ||
+        attr.AttributeClass.HasFullyQualifiedMetadataName(TimerEndpointAttributeName) ||
+        attr.AttributeClass.HasFullyQualifiedMetadataName(QueueEndpointAttributeName);
+
+    private static bool IsFilterAttribute(AttributeData attr) =>
+        attr.AttributeClass.HasFullyQualifiedMetadataName(FilterAttributeName);
 
     private static int GetFilterOrder(AttributeData attr)
     {
@@ -189,20 +211,20 @@ internal static class FunctionModelBuilder
 
     private static bool ImplementsInterface(INamedTypeSymbol type, string interfaceFullName)
     {
-        return type.AllInterfaces.Any(i => i.ToDisplayString() == interfaceFullName);
+        return type.AllInterfaces.Any(i => i.HasFullyQualifiedMetadataName(interfaceFullName));
     }
 
     // 戻り値の型が IActionResult そのもの、または IActionResult を実装しているかを判定する。
     // Determines whether the type is IActionResult itself or implements IActionResult.
     private static bool IsActionResult(ITypeSymbol type)
     {
-        return (type.ToDisplayString() == IActionResultFullName) ||
-               type.AllInterfaces.Any(static i => i.ToDisplayString() == IActionResultFullName);
+        return type.HasFullyQualifiedMetadataName(IActionResultFullName) ||
+               type.AllInterfaces.Any(static i => i.HasFullyQualifiedMetadataName(IActionResultFullName));
     }
 
     // メソッドのエンドポイント属性 (Http/Timer/Queue) を解析してハンドラーの種類と設定を決定する。
     // Analyzes endpoint attributes (Http/Timer/Queue) on a method to determine handler handlerType and configuration.
-    private static HandlerModel? BuildHandlerModel(IMethodSymbol method, List<DiagnosticInfo> diagnostics)
+    private static HandlerModel? BuildHandlerModel(IMethodSymbol method, List<DiagnosticInfo> diagnostics, List<DiagnosticInfo> warnings)
     {
         HandlerType? handlerType = null;
         string? httpMethod = null;
@@ -215,8 +237,7 @@ internal static class FunctionModelBuilder
 
         foreach (var attr in method.GetAttributes())
         {
-            var attrName = attr.AttributeClass?.ToDisplayString();
-            if (attrName == HttpEndpointAttributeName)
+            if (attr.AttributeClass.HasFullyQualifiedMetadataName(HttpEndpointAttributeName))
             {
                 handlerAttrCount++;
                 handlerType = HandlerType.Http;
@@ -226,19 +247,25 @@ internal static class FunctionModelBuilder
                 {
                     var levelValue = attr.ConstructorArguments[2].Value;
                     authorizationLevel = levelValue is not null ? GetAuthorizationLevelName((int)levelValue) : "Function";
+
+                    if ((levelValue is int level) && (level is < 0 or > 4))
+                    {
+                        diagnostics.Add(new DiagnosticInfo(Diagnostics.UndefinedEnumValue, method.Locations.FirstOrDefault(), method.Name, level.ToString(System.Globalization.CultureInfo.InvariantCulture)));
+                        return null;
+                    }
                 }
                 else
                 {
                     authorizationLevel = "Function";
                 }
             }
-            else if (attrName == TimerEndpointAttributeName)
+            else if (attr.AttributeClass.HasFullyQualifiedMetadataName(TimerEndpointAttributeName))
             {
                 handlerAttrCount++;
                 handlerType = HandlerType.Timer;
                 timerSchedule = attr.ConstructorArguments.Length > 0 ? attr.ConstructorArguments[0].Value as string : null;
             }
-            else if (attrName == QueueEndpointAttributeName)
+            else if (attr.AttributeClass.HasFullyQualifiedMetadataName(QueueEndpointAttributeName))
             {
                 handlerAttrCount++;
                 handlerType = HandlerType.Queue;
@@ -263,6 +290,13 @@ internal static class FunctionModelBuilder
             return null;
         }
 
+        if (method.IsGenericMethod)
+        {
+            var loc = method.Locations.Length > 0 ? method.Locations[0] : null;
+            diagnostics.Add(new DiagnosticInfo(Diagnostics.GenericHandler, loc, method.Name));
+            return null;
+        }
+
         // 各パラメータのバインディング種別を解決してパラメータモデルを構築する
         // Resolve binding handlerType for each parameter and build parameter models
         var parameters = new List<ParameterModel>();
@@ -270,11 +304,11 @@ internal static class FunctionModelBuilder
         {
             if (handlerType != HandlerType.Http)
             {
-                var hasHttpOnlyAttr = param.GetAttributes().Any(a =>
-                    (a.AttributeClass?.ToDisplayString() == FromQueryAttributeName) ||
-                    (a.AttributeClass?.ToDisplayString() == FromRouteAttributeName) ||
-                    (a.AttributeClass?.ToDisplayString() == FromHeaderAttributeName) ||
-                    (a.AttributeClass?.ToDisplayString() == FromBodyAttributeName));
+                var hasHttpOnlyAttr = param.GetAttributes().Any(static a =>
+                    a.AttributeClass.HasFullyQualifiedMetadataName(FromQueryAttributeName) ||
+                    a.AttributeClass.HasFullyQualifiedMetadataName(FromRouteAttributeName) ||
+                    a.AttributeClass.HasFullyQualifiedMetadataName(FromHeaderAttributeName) ||
+                    a.AttributeClass.HasFullyQualifiedMetadataName(FromBodyAttributeName));
                 if (hasHttpOnlyAttr)
                 {
                     var loc = method.Locations.Length > 0 ? method.Locations[0] : null;
@@ -283,9 +317,17 @@ internal static class FunctionModelBuilder
                 }
             }
 
+            ReportForeignBindingAttributes(param, warnings);
+
             var paramModel = BuildParameterModel(param, handlerType.Value, diagnostics);
             if (paramModel is null)
             {
+                return null;
+            }
+
+            if ((paramModel.BindingType == ParameterBindingType.FromTrigger) && !IsSupportedTriggerPayload(param.Type, handlerType.Value))
+            {
+                diagnostics.Add(new DiagnosticInfo(Diagnostics.UnsupportedTriggerPayload, param.Locations.FirstOrDefault(), method.Name, param.Name));
                 return null;
             }
 
@@ -307,11 +349,7 @@ internal static class FunctionModelBuilder
 
         if (handlerType == HandlerType.Http)
         {
-            ValidateRouteBindings(route ?? method.Name, parameters, method, diagnostics);
-            if (diagnostics.Count > 0)
-            {
-                return null;
-            }
+            ValidateRouteBindings(route ?? method.Name, parameters, method, warnings);
         }
 
         // 戻り値の型を解析して非同期かどうかと結果型を確定する
@@ -323,21 +361,21 @@ internal static class FunctionModelBuilder
 
         if (returnType is INamedTypeSymbol namedReturn)
         {
-            if ((namedReturn.OriginalDefinition.ToDisplayString() == "System.Threading.Tasks.Task<TResult>") ||
-                (namedReturn.OriginalDefinition.ToDisplayString() == "System.Threading.Tasks.ValueTask<TResult>"))
+            if (namedReturn.HasFullyQualifiedMetadataName("System.Threading.Tasks.Task`1") ||
+                namedReturn.HasFullyQualifiedMetadataName("System.Threading.Tasks.ValueTask`1"))
             {
                 isAsync = true;
                 var inner = namedReturn.TypeArguments[0];
                 resultType = MakeTypeRef(inner);
                 resultIsActionResult = IsActionResult(inner);
             }
-            else if ((namedReturn.ToDisplayString() == "System.Threading.Tasks.Task") ||
-                     (namedReturn.ToDisplayString() == "System.Threading.Tasks.ValueTask"))
+            else if (namedReturn.HasFullyQualifiedMetadataName("System.Threading.Tasks.Task") ||
+                     namedReturn.HasFullyQualifiedMetadataName("System.Threading.Tasks.ValueTask"))
             {
                 isAsync = true;
                 resultType = null;
             }
-            else if (namedReturn.ToDisplayString() == "void")
+            else if (namedReturn.SpecialType == SpecialType.System_Void)
             {
                 resultType = null;
             }
@@ -370,6 +408,30 @@ internal static class FunctionModelBuilder
             queueConnection);
     }
 
+    private static bool IsSupportedTriggerPayload(ITypeSymbol type, HandlerType handlerType) =>
+        (type.SpecialType == SpecialType.System_Object) ||
+        (handlerType == HandlerType.Timer
+            ? type.HasFullyQualifiedMetadataName("Microsoft.Azure.Functions.Worker.TimerInfo")
+            : (handlerType != HandlerType.Queue) || (type.SpecialType == SpecialType.System_String));
+
+    private static void ReportForeignBindingAttributes(IParameterSymbol param, List<DiagnosticInfo> warnings)
+    {
+        foreach (var attr in param.GetAttributes())
+        {
+            if ((attr.AttributeClass is { } attrClass) &&
+                (attrClass.Name is "FromBodyAttribute" or "FromQueryAttribute" or "FromHeaderAttribute" or "FromRouteAttribute" or "FromServicesAttribute" or "FromTriggerAttribute") &&
+                (attrClass.ContainingNamespace.ToDisplayString() != "AzureFunctionsExtension.Annotations"))
+            {
+                warnings.Add(new DiagnosticInfo(
+                    Diagnostics.ForeignBindingAttribute,
+                    attr.ApplicationSyntaxReference?.GetSyntax().GetLocation() ?? param.Locations.FirstOrDefault(),
+                    param.ContainingSymbol.Name,
+                    param.Name,
+                    attrClass.ToDisplayString()));
+            }
+        }
+    }
+
     private static string GetAuthorizationLevelName(int value)
     {
         return value switch
@@ -396,15 +458,15 @@ internal static class FunctionModelBuilder
         var bindingAttrCount = 0;
         foreach (var attr in param.GetAttributes())
         {
-            var attrName = attr.AttributeClass?.ToDisplayString();
-            if (attrName == FromBodyAttributeName)
+            var attrClass = attr.AttributeClass;
+            if (attrClass.HasFullyQualifiedMetadataName(FromBodyAttributeName))
             {
                 bindingAttrCount++;
                 bindingType = ParameterBindingType.FromBody;
                 var skipArg = attr.NamedArguments.FirstOrDefault(static a => a.Key == "SkipValidate").Value.Value;
                 skipValidation = skipArg is true;
             }
-            else if (attrName == FromQueryAttributeName)
+            else if (attrClass.HasFullyQualifiedMetadataName(FromQueryAttributeName))
             {
                 bindingAttrCount++;
                 bindingType = ParameterBindingType.FromQuery;
@@ -414,7 +476,7 @@ internal static class FunctionModelBuilder
                     key = nameArg!;
                 }
             }
-            else if (attrName == FromHeaderAttributeName)
+            else if (attrClass.HasFullyQualifiedMetadataName(FromHeaderAttributeName))
             {
                 bindingAttrCount++;
                 bindingType = ParameterBindingType.FromHeader;
@@ -424,7 +486,7 @@ internal static class FunctionModelBuilder
                     key = nameArg!;
                 }
             }
-            else if (attrName == FromRouteAttributeName)
+            else if (attrClass.HasFullyQualifiedMetadataName(FromRouteAttributeName))
             {
                 bindingAttrCount++;
                 bindingType = ParameterBindingType.FromRoute;
@@ -434,7 +496,7 @@ internal static class FunctionModelBuilder
                     key = nameArg!;
                 }
             }
-            else if (attrName == FromServicesAttributeName)
+            else if (attrClass.HasFullyQualifiedMetadataName(FromServicesAttributeName))
             {
                 bindingAttrCount++;
                 bindingType = ParameterBindingType.FromServices;
@@ -447,7 +509,7 @@ internal static class FunctionModelBuilder
                     key = nameArg!;
                 }
             }
-            else if (attrName == FromTriggerAttributeName)
+            else if (attrClass.HasFullyQualifiedMetadataName(FromTriggerAttributeName))
             {
                 bindingAttrCount++;
                 bindingType = ParameterBindingType.FromTrigger;
@@ -468,24 +530,22 @@ internal static class FunctionModelBuilder
         // No binding attribute: auto-detect special parameters (HttpRequest, FunctionContext, etc.) by type name
         if (bindingAttrCount == 0)
         {
-            var typeName = paramType.ToDisplayString();
-            if (typeName == HttpRequestFullName)
+            if (paramType.HasFullyQualifiedMetadataName(HttpRequestFullName))
             {
                 bindingType = ParameterBindingType.HttpRequest;
                 converterMethod = string.Empty;
             }
-            else if (typeName == FunctionContextFullName)
+            else if (paramType.HasFullyQualifiedMetadataName(FunctionContextFullName))
             {
                 bindingType = ParameterBindingType.Context;
                 converterMethod = string.Empty;
             }
-            else if (typeName == CancellationTokenFullName)
+            else if (paramType.HasFullyQualifiedMetadataName(CancellationTokenFullName))
             {
                 bindingType = ParameterBindingType.CancellationToken;
                 converterMethod = string.Empty;
             }
-            else if ((paramType is INamedTypeSymbol namedType) &&
-                     (namedType.OriginalDefinition.ToDisplayString() == "Microsoft.Extensions.Logging.ILogger<TCategoryName>"))
+            else if (paramType.HasFullyQualifiedMetadataName("Microsoft.Extensions.Logging.ILogger`1"))
             {
                 bindingType = ParameterBindingType.Logger;
                 converterMethod = string.Empty;
@@ -506,14 +566,10 @@ internal static class FunctionModelBuilder
             return null;
         }
 
-        // 明示的なデフォルト値があれば文字列リテラルとして保持する
-        // Preserve explicit default value as a string literal if present
+        // 明示的なデフォルト値があれば C# の式として保持する
+        // Preserve explicit default value as a C# expression if present
         var hasDefault = param.HasExplicitDefaultValue;
-        string? defaultValueLiteral = null;
-        if (hasDefault)
-        {
-            defaultValueLiteral = FormatDefaultValue(param.ExplicitDefaultValue);
-        }
+        var defaultValueLiteral = param.GetDefaultValueExpression();
 
         return new ParameterModel(
             param.Name,
@@ -617,33 +673,6 @@ internal static class FunctionModelBuilder
         }
 
         return parameters;
-    }
-
-    private static string FormatDefaultValue(object? value)
-    {
-        if (value is null)
-        {
-            return "default";
-        }
-
-        if (value is string s)
-        {
-            return SymbolDisplay.FormatLiteral(s, quote: true);
-        }
-
-        if (value is bool b)
-        {
-            return b ? "true" : "false";
-        }
-
-        if (value is char c)
-        {
-            return SymbolDisplay.FormatLiteral(c, quote: true);
-        }
-
-        // 数値などはカルチャ非依存のリテラルとして出力する (型キャストは呼び出し側で付与)
-        // Emit numeric and other literals using invariant culture (the cast is added by the caller).
-        return Convert.ToString(value, CultureInfo.InvariantCulture) ?? "default";
     }
 
     private static string GetConverterMethod(ITypeSymbol type)

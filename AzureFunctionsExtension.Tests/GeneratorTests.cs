@@ -236,6 +236,61 @@ public sealed class GeneratorTests
     }
 
     [Fact]
+    public void ThrowsForNullableActionResultInsteadOfWrapping()
+    {
+        const string source =
+            """
+            namespace TestFunctions;
+
+            using System.Threading.Tasks;
+            using AzureFunctionsExtension.Annotations;
+            using Microsoft.AspNetCore.Mvc;
+
+            [AzureFunction]
+            public sealed partial class SampleFunction
+            {
+                [HttpEndpoint("get", "sample")]
+                public Task<IActionResult?> Run() => Task.FromResult<IActionResult?>(new NotFoundResult());
+            }
+            """;
+
+        var result = RunGenerator(source);
+
+        Assert.Empty(GetProblemIds(source));
+        Assert.Contains("return __result__ ?? throw new global::System.InvalidOperationException(", result.GeneratedCode, StringComparison.Ordinal);
+        Assert.DoesNotContain("Results.Ok(__result__)", result.GeneratedCode, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void WrapsNullableReturnValueWithResultsOkWithoutWarning()
+    {
+        const string source =
+            """
+            namespace TestFunctions;
+
+            using System.Threading.Tasks;
+            using AzureFunctionsExtension.Annotations;
+
+            public sealed class Item
+            {
+                public int Id { get; set; }
+            }
+
+            [AzureFunction]
+            public sealed partial class SampleFunction
+            {
+                [HttpEndpoint("get", "items/{id}")]
+                public Task<Item?> Run([AzureFunctionsExtension.Annotations.FromRoute] int id) => Task.FromResult<Item?>(null);
+            }
+            """;
+
+        var result = RunGenerator(source);
+
+        Assert.Empty(GetProblemIds(source));
+        Assert.Contains("return global::AzureFunctionsExtension.Results.Ok(__result__);", result.GeneratedCode, StringComparison.Ordinal);
+    }
+
+    [Fact]
     public void WrapsVoidHttpHandlerWithResultsOk()
     {
         const string source =
@@ -411,8 +466,7 @@ public sealed class GeneratorTests
         var result = RunGenerator(source);
 
         AssertNoGeneratorErrors(result);
-        Assert.Contains("?)default;", result.GeneratedCode, StringComparison.Ordinal);
-        Assert.DoesNotContain("?)null;", result.GeneratedCode, StringComparison.Ordinal);
+        Assert.Contains("var p0 = (global::System.Guid?)null;", result.GeneratedCode, StringComparison.Ordinal);
     }
 
     [Fact]
@@ -473,7 +527,7 @@ public sealed class GeneratorTests
         var result = RunGenerator(source);
 
         AssertNoGeneratorErrors(result);
-        Assert.Contains("(global::TestFunctions.Mode)1", result.GeneratedCode, StringComparison.Ordinal);
+        Assert.Contains("(global::TestFunctions.Mode)global::TestFunctions.Mode.Advanced", result.GeneratedCode, StringComparison.Ordinal);
         Assert.DoesNotContain(")Advanced", result.GeneratedCode, StringComparison.Ordinal);
     }
 
@@ -507,7 +561,7 @@ public sealed class GeneratorTests
         var result = RunGenerator(source);
 
         AssertNoGeneratorErrors(result);
-        Assert.Contains("(global::TestFunctions.Mode?)1", result.GeneratedCode, StringComparison.Ordinal);
+        Assert.Contains("(global::TestFunctions.Mode?)global::TestFunctions.Mode.Advanced", result.GeneratedCode, StringComparison.Ordinal);
         Assert.DoesNotContain(")Advanced", result.GeneratedCode, StringComparison.Ordinal);
     }
 
@@ -648,6 +702,113 @@ public sealed class GeneratorTests
         AssertNoGeneratorErrors(result);
         Assert.Contains("catch (global::System.Text.Json.JsonException)", result.GeneratedCode, StringComparison.Ordinal);
         Assert.Contains("Request body is required.", result.GeneratedCode, StringComparison.Ordinal);
+    }
+
+    //--------------------------------------------------------------------------------
+    // Literal and identifier
+    //--------------------------------------------------------------------------------
+
+    [Fact]
+    public void EscapesRouteTemplateLiteral()
+    {
+        const string source =
+            """
+            namespace TestFunctions;
+
+            using AzureFunctionsExtension.Annotations;
+            using Microsoft.AspNetCore.Mvc;
+
+            [AzureFunction]
+            public sealed partial class SampleFunction
+            {
+                [HttpEndpoint("get", "items/{id:regex(^\\d+$)}")]
+                public IActionResult Run([AzureFunctionsExtension.Annotations.FromRoute] int id) => new EmptyResult();
+            }
+            """;
+
+        var result = RunGenerator(source);
+
+        Assert.Empty(GetProblemIds(source));
+        Assert.Contains("""Route = "items/{id:regex(^\\d+$)}")""", result.GeneratedCode, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void EscapesBindingKeyLiteral()
+    {
+        const string source =
+            """
+            namespace TestFunctions;
+
+            using AzureFunctionsExtension.Annotations;
+            using Microsoft.AspNetCore.Mvc;
+
+            [AzureFunction]
+            public sealed partial class SampleFunction
+            {
+                [HttpEndpoint("get", "sample")]
+                public IActionResult Run([AzureFunctionsExtension.Annotations.FromQuery("a\"{b}")] int value) => new EmptyResult();
+            }
+            """;
+
+        var result = RunGenerator(source);
+
+        Assert.Empty(GetProblemIds(source));
+        Assert.Contains("""req.Query.TryGetValue("a\"{b}", """, result.GeneratedCode, StringComparison.Ordinal);
+        Assert.Contains("""("Invalid parameter: a\"{b}")""", result.GeneratedCode, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void FormatsNegativeEnumDefaultValue()
+    {
+        const string source =
+            """
+            namespace TestFunctions;
+
+            using AzureFunctionsExtension.Annotations;
+            using Microsoft.AspNetCore.Mvc;
+
+            public enum Mode
+            {
+                Basic,
+            }
+
+            [AzureFunction]
+            public sealed partial class SampleFunction
+            {
+                [HttpEndpoint("get", "sample")]
+                public IActionResult Run([AzureFunctionsExtension.Annotations.FromQuery] Mode mode = (Mode)(-1)) => new EmptyResult();
+            }
+            """;
+
+        var result = RunGenerator(source);
+
+        Assert.Empty(GetProblemIds(source));
+        Assert.Contains("(global::TestFunctions.Mode)(-1)", result.GeneratedCode, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void EscapesKeywordHandlerName()
+    {
+        const string source =
+            """
+            namespace TestFunctions;
+
+            using AzureFunctionsExtension.Annotations;
+            using Microsoft.AspNetCore.Mvc;
+
+            [AzureFunction]
+            public sealed partial class SampleFunction
+            {
+                [HttpEndpoint("get", "sample")]
+                public IActionResult @event() => new EmptyResult();
+            }
+            """;
+
+        var result = RunGenerator(source);
+
+        Assert.Empty(GetProblemIds(source));
+        Assert.Contains("[global::Microsoft.Azure.Functions.Worker.Function(\"event\")]", result.GeneratedCode, StringComparison.Ordinal);
+        Assert.Contains("target.@event()", result.GeneratedCode, StringComparison.Ordinal);
     }
 
     //--------------------------------------------------------------------------------

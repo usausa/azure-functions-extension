@@ -16,8 +16,8 @@
     <ItemGroup>
       <TfmSpecificPackageFile Include="..\AzureFunctionsExtension.Generator\bin\$(Configuration)\netstandard2.0\AzureFunctionsExtension.Generator.dll" Pack="true" PackagePath="analyzers/dotnet/cs" Visible="false" />
       <TfmSpecificPackageFile Include="$(PKGSourceGenerateHelper)\lib\netstandard2.0\SourceGenerateHelper.dll" Pack="true" PackagePath="analyzers/dotnet/cs" Visible="false" />
-      <TfmSpecificPackageFile Include="..\AzureFunctionsExtension.props" Pack="true" PackagePath="buildTransitive\AzureFunctionsExtension.props" Visible="false" />
-      <TfmSpecificPackageFile Include="..\AzureFunctionsExtension.targets" Pack="true" PackagePath="buildTransitive\AzureFunctionsExtension.targets" Visible="false" />
+      <TfmSpecificPackageFile Include="..\AzureFunctionsExtension.props" Pack="true" PackagePath="build\AzureFunctionsExtension.props" Visible="false" />
+      <TfmSpecificPackageFile Include="..\AzureFunctionsExtension.targets" Pack="true" PackagePath="build\AzureFunctionsExtension.targets" Visible="false" />
     </ItemGroup>
   </Target>
 
@@ -32,7 +32,7 @@
     <PackageReference Include="Microsoft.Azure.Functions.Worker" Version="2.52.0" />
     <PackageReference Include="Microsoft.Azure.Functions.Worker.Extensions.Http.AspNetCore" Version="2.1.1" />
     <PackageReference Include="Microsoft.Extensions.DependencyInjection" Version="10.0.12" />
-    <PackageReference Include="SourceGenerateHelper" Version="1.28.0" GeneratePathProperty="true" PrivateAssets="all" />
+    <PackageReference Include="SourceGenerateHelper" Version="1.30.0" GeneratePathProperty="true" PrivateAssets="all" />
   </ItemGroup>
 
   <ItemGroup>
