@@ -158,6 +158,17 @@ public IActionResult GetItem([FromRoute] int id)
 }
 ```
 
+Arrays are bound by splitting the route value on commas, like the query string
+(`/route-array/1,2,3` binds `[1, 2, 3]`).
+
+```csharp
+[HttpEndpoint("get", "route-array/{ids}", AuthorizationLevel.Anonymous)]
+public IActionResult RouteArray([FromRoute] int[] ids)
+{
+    return Results.Ok(ids);
+}
+```
+
 ### Header
 
 ```csharp
@@ -167,6 +178,21 @@ public IActionResult HeaderEcho([FromHeader("X-Correlation-Id")] string? correla
     return Results.Ok(new { CorrelationId = correlationId ?? "(none)" });
 }
 ```
+
+Arrays are bound by splitting the header value on commas, like the query string.
+Multiple header lines are joined with commas first, so `X-Ids: 1,2,3` and the two lines
+`X-Ids: 1` and `X-Ids: 2,3` bind the same array.
+
+```csharp
+[HttpEndpoint("get", "header-array", AuthorizationLevel.Anonymous)]
+public IActionResult HeaderArray([FromHeader("X-Ids")] int[] ids)
+{
+    return Results.Ok(ids);
+}
+```
+
+The elements are not trimmed, so a `string[]` keeps the space in `X-Ids: a, b`.
+A header whose value itself contains commas (such as an HTTP date) cannot be bound as an array.
 
 ### Body
 

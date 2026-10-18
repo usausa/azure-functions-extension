@@ -33,7 +33,7 @@
 |---|---|---|---|
 | AFE0301 | ❌ Error | HTTP-only binding attribute is used on a non-HTTP function | Remove the HTTP-only binding, or use an HTTP trigger |
 | AFE0302 | ❌ Error | Parameter has multiple binding attributes | Leave a single binding attribute on the parameter |
-| AFE0303 | ❌ Error | Parameter type is not supported by binding | Use a supported parameter type |
+| AFE0303 | ❌ Error | Parameter type is not supported by binding (an array bound with `[FromQuery]` / `[FromHeader]` / `[FromRoute]` must be one-dimensional; jagged and multidimensional arrays are not supported) | Use a supported parameter type |
 | AFE0304 | ❌ Error | `[TimerEndpoint]` trigger payload is not `TimerInfo`, or `[QueueEndpoint]` payload is not `string` (the generated function passes those types) | Receive `TimerInfo` / `string` and convert in the function |
 | AFE0305 | ⚠️ Warning | Parameter has an attribute with the name of a binding attribute (`[FromHeader]` and so on) from another library such as ASP.NET Core MVC, which is ignored | Use the attribute of `AzureFunctionsExtension.Annotations` |
 

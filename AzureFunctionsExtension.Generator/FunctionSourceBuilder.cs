@@ -533,61 +533,11 @@ internal static class FunctionSourceBuilder
         if (param.Type.IsArray && (param.Type.ElementType is not null))
         {
             var elemType = param.Type.ElementType.FullName;
-            var converterMethod = param.ConverterMethod;
             builder.AppendLine($"var {pVar} = global::System.Array.Empty<{elemType}>();");
             builder.AppendLine($"if ({dictExpr}.TryGetValue({CSharpLiteral.Format(key)}, out var {pRaw}) &&");
             builder.AppendLine($"    {pRaw} != global::Microsoft.Extensions.Primitives.StringValues.Empty)");
             builder.BeginScope();
-            builder.AppendLine($"var {pVar}parts = {pRaw}.ToString().Split(',');");
-            builder.AppendLine($"{pVar} = new {elemType}[{pVar}parts.Length];");
-            builder.AppendLine($"for (var i = 0; i < {pVar}parts.Length; i++)");
-            builder.BeginScope();
-            if (String.IsNullOrEmpty(converterMethod))
-            {
-                builder.AppendLine($"{pVar}[i] = {pVar}parts[i];");
-            }
-            else if (param.Type.ElementType.IsNullable && (param.Type.ElementType.UnderlyingType is not null))
-            {
-                var baseElemType = param.Type.ElementType.UnderlyingType.FullName;
-                var isEnum = converterMethod == "TryToEnum";
-                var converterCall = isEnum
-                    ? $"!{StringConverterType}.TryToEnum<{baseElemType}>({AsSpanMethod}({pVar}parts[i]), out var {pVar}elem)"
-                    : $"!{StringConverterType}.{converterMethod}({AsSpanMethod}({pVar}parts[i]), out var {pVar}elem)";
-                builder.AppendLine($"if ({converterCall})");
-                builder.BeginScope();
-                if (hasFilter)
-                {
-                    builder.AppendLine($"ctx.Result = new {BadRequestResultType}({InvalidParameterMessage(key)});");
-                    builder.AppendLine("return;");
-                }
-                else
-                {
-                    builder.AppendLine($"return new {BadRequestResultType}({InvalidParameterMessage(key)});");
-                }
-                builder.EndScope();
-                builder.AppendLine($"{pVar}[i] = {pVar}elem;");
-            }
-            else
-            {
-                var isEnum = converterMethod == "TryToEnum";
-                var converterCall = isEnum
-                    ? $"!{StringConverterType}.TryToEnum<{elemType}>({AsSpanMethod}({pVar}parts[i]), out {pVar}[i])"
-                    : $"!{StringConverterType}.{converterMethod}({AsSpanMethod}({pVar}parts[i]), out {pVar}[i])";
-                builder.AppendLine($"if ({converterCall})");
-                builder.BeginScope();
-                if (hasFilter)
-                {
-                    builder.AppendLine($"ctx.Result = new {BadRequestResultType}({InvalidParameterMessage(key)});");
-                    builder.AppendLine("return;");
-                }
-                else
-                {
-                    builder.AppendLine($"return new {BadRequestResultType}({InvalidParameterMessage(key)});");
-                }
-                builder.EndScope();
-            }
-
-            builder.EndScope();
+            BuildArrayElementBinding(builder, param, param.Type.ElementType, index, hasFilter, $"{pRaw}.ToString()");
             builder.EndScope();
             builder.NewLine();
         }
@@ -682,7 +632,17 @@ internal static class FunctionSourceBuilder
         var converterMethod = param.ConverterMethod;
         var defaultLiteral = param.HasDefault ? (param.DefaultValueLiteral ?? "default") : null;
 
-        if (param.Type.IsNullable && (param.Type.UnderlyingType is not null))
+        if (param.Type.IsArray && (param.Type.ElementType is not null))
+        {
+            var elemType = param.Type.ElementType.FullName;
+            builder.AppendLine($"var {pVar} = global::System.Array.Empty<{elemType}>();");
+            builder.AppendLine($"if (req.RouteValues.TryGetValue({CSharpLiteral.Format(key)}, out var {pRaw}obj) && {pRaw}obj is string {pRaw})");
+            builder.BeginScope();
+            BuildArrayElementBinding(builder, param, param.Type.ElementType, index, hasFilter, pRaw);
+            builder.EndScope();
+            builder.NewLine();
+        }
+        else if (param.Type.IsNullable && (param.Type.UnderlyingType is not null))
         {
             var baseType = param.Type.UnderlyingType.FullName;
             var init = defaultLiteral is not null ? $"({typeName}){defaultLiteral}" : $"({typeName})null";
@@ -763,7 +723,11 @@ internal static class FunctionSourceBuilder
         var converterMethod = param.ConverterMethod;
         var defaultLiteral = param.HasDefault ? (param.DefaultValueLiteral ?? "default") : null;
 
-        if (param.Type.IsNullable && (param.Type.UnderlyingType is not null))
+        if (param.Type.IsArray && (param.Type.ElementType is not null))
+        {
+            BuildScalarOrArrayBinding(builder, param, index, hasFilter, "req.Headers");
+        }
+        else if (param.Type.IsNullable && (param.Type.UnderlyingType is not null))
         {
             var baseType = param.Type.UnderlyingType.FullName;
             var init = defaultLiteral is not null ? $"({typeName}){defaultLiteral}" : $"({typeName})null";
@@ -837,6 +801,64 @@ internal static class FunctionSourceBuilder
             builder.EndScope();
             builder.NewLine();
         }
+    }
+
+    private static void BuildArrayElementBinding(SourceBuilder builder, ParameterModel param, TypeRefModel elementType, int index, bool hasFilter, string valueExpr)
+    {
+        var pVar = $"p{index}";
+        var elemType = elementType.FullName;
+        var key = param.Key;
+        var converterMethod = param.ConverterMethod;
+        builder.AppendLine($"var {pVar}parts = {valueExpr}.Split(',');");
+        builder.AppendLine($"{pVar} = new {elemType}[{pVar}parts.Length];");
+        builder.AppendLine($"for (var i = 0; i < {pVar}parts.Length; i++)");
+        builder.BeginScope();
+        if (String.IsNullOrEmpty(converterMethod))
+        {
+            builder.AppendLine($"{pVar}[i] = {pVar}parts[i];");
+        }
+        else if (elementType.IsNullable && (elementType.UnderlyingType is not null))
+        {
+            var baseElemType = elementType.UnderlyingType.FullName;
+            var isEnum = converterMethod == "TryToEnum";
+            var converterCall = isEnum
+                ? $"!{StringConverterType}.TryToEnum<{baseElemType}>({AsSpanMethod}({pVar}parts[i]), out var {pVar}elem)"
+                : $"!{StringConverterType}.{converterMethod}({AsSpanMethod}({pVar}parts[i]), out var {pVar}elem)";
+            builder.AppendLine($"if ({converterCall})");
+            builder.BeginScope();
+            if (hasFilter)
+            {
+                builder.AppendLine($"ctx.Result = new {BadRequestResultType}({InvalidParameterMessage(key)});");
+                builder.AppendLine("return;");
+            }
+            else
+            {
+                builder.AppendLine($"return new {BadRequestResultType}({InvalidParameterMessage(key)});");
+            }
+            builder.EndScope();
+            builder.AppendLine($"{pVar}[i] = {pVar}elem;");
+        }
+        else
+        {
+            var isEnum = converterMethod == "TryToEnum";
+            var converterCall = isEnum
+                ? $"!{StringConverterType}.TryToEnum<{elemType}>({AsSpanMethod}({pVar}parts[i]), out {pVar}[i])"
+                : $"!{StringConverterType}.{converterMethod}({AsSpanMethod}({pVar}parts[i]), out {pVar}[i])";
+            builder.AppendLine($"if ({converterCall})");
+            builder.BeginScope();
+            if (hasFilter)
+            {
+                builder.AppendLine($"ctx.Result = new {BadRequestResultType}({InvalidParameterMessage(key)});");
+                builder.AppendLine("return;");
+            }
+            else
+            {
+                builder.AppendLine($"return new {BadRequestResultType}({InvalidParameterMessage(key)});");
+            }
+            builder.EndScope();
+        }
+
+        builder.EndScope();
     }
 
     // __target__ の実メソッドを呼び出すコードを出力する。

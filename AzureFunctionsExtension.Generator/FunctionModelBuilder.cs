@@ -604,7 +604,9 @@ internal static class FunctionModelBuilder
     {
         if (type is IArrayTypeSymbol arrayType)
         {
-            return IsSupportedTextBindingType(arrayType.ElementType, GetConverterMethod(arrayType.ElementType));
+            return (arrayType.Rank == 1) &&
+                   (arrayType.ElementType is not IArrayTypeSymbol) &&
+                   IsSupportedTextBindingType(arrayType.ElementType, GetConverterMethod(arrayType.ElementType));
         }
 
         if ((type is INamedTypeSymbol namedType) &&

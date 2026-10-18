@@ -555,6 +555,34 @@ public class DiagnosticTests
     }
 
     [Theory]
+    [InlineData("sample", "[AzureFunctionsExtension.Annotations.FromQuery] int[][] ids")]
+    [InlineData("sample", "[AzureFunctionsExtension.Annotations.FromQuery] int[,] ids")]
+    [InlineData("sample", "[AzureFunctionsExtension.Annotations.FromHeader(\"x-ids\")] int[][] ids")]
+    [InlineData("sample", "[AzureFunctionsExtension.Annotations.FromHeader(\"x-ids\")] int[,] ids")]
+    [InlineData("items/{ids}", "[AzureFunctionsExtension.Annotations.FromRoute] int[][] ids")]
+    [InlineData("items/{ids}", "[AzureFunctionsExtension.Annotations.FromRoute] int[,] ids")]
+    public void Afe0303JaggedOrMultidimensionalArrayEmitsDiagnostic(string route, string parameter)
+    {
+        var source = $$"""
+            namespace TestFunctions;
+
+            using AzureFunctionsExtension.Annotations;
+            using Microsoft.AspNetCore.Mvc;
+
+            [AzureFunction]
+            public sealed partial class SampleFunction
+            {
+                [HttpEndpoint("get", "{{route}}")]
+                public IActionResult Run({{parameter}}) => new EmptyResult();
+            }
+            """;
+
+        var problems = GetProblemIds(source);
+
+        Assert.Equal(["AFE0303"], problems);
+    }
+
+    [Theory]
     [InlineData("[TimerEndpoint(\"0 */5 * * * *\")]", "string payload")]
     [InlineData("[QueueEndpoint(\"queue\")]", "Payload payload")]
     public void Afe0304UnsupportedTriggerPayloadEmitsDiagnostic(string attribute, string parameter)

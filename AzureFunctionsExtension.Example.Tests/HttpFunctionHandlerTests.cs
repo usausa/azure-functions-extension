@@ -136,6 +136,35 @@ public sealed class HttpFunctionHandlerTests
     }
 
     [Fact]
+    public async Task RouteArrayHandlerCommaSeparatedValuesReturns200WithArray()
+    {
+        var services = HandlerTestHost.CreateServices();
+        var req = HandlerTestHost.CreateRequest(
+            services,
+            route: new Dictionary<string, object?> { ["ids"] = "1,2,3" });
+
+        var result = await HttpFunction.RouteArray_Handler(req, HandlerTestHost.CreateContext(services));
+
+        Assert.Equal(200, HandlerTestHost.StatusOf(result));
+        var body = HandlerTestHost.ValueOf<int[]>(result);
+        Assert.NotNull(body);
+        Assert.Equal([1, 2, 3], body);
+    }
+
+    [Fact]
+    public async Task RouteArrayHandlerInvalidElementReturns400()
+    {
+        var services = HandlerTestHost.CreateServices();
+        var req = HandlerTestHost.CreateRequest(
+            services,
+            route: new Dictionary<string, object?> { ["ids"] = "1,abc" });
+
+        var result = await HttpFunction.RouteArray_Handler(req, HandlerTestHost.CreateContext(services));
+
+        Assert.Equal(400, HandlerTestHost.StatusOf(result));
+    }
+
+    [Fact]
     public async Task HeaderEchoHandlerReturns200()
     {
         var services = HandlerTestHost.CreateServices();
@@ -146,6 +175,65 @@ public sealed class HttpFunctionHandlerTests
         var result = await HttpFunction.HeaderEcho_Handler(req, HandlerTestHost.CreateContext(services));
 
         Assert.Equal(200, HandlerTestHost.StatusOf(result));
+    }
+
+    [Fact]
+    public async Task HeaderArrayHandlerCommaSeparatedValuesReturns200WithArray()
+    {
+        var services = HandlerTestHost.CreateServices();
+        var req = HandlerTestHost.CreateRequest(
+            services,
+            headers: new Dictionary<string, StringValues> { ["X-Ids"] = "1, 2, 3" });
+
+        var result = await HttpFunction.HeaderArray_Handler(req, HandlerTestHost.CreateContext(services));
+
+        Assert.Equal(200, HandlerTestHost.StatusOf(result));
+        var body = HandlerTestHost.ValueOf<int[]>(result);
+        Assert.NotNull(body);
+        Assert.Equal([1, 2, 3], body);
+    }
+
+    [Fact]
+    public async Task HeaderArrayHandlerMultipleHeaderValuesReturns200WithArray()
+    {
+        var services = HandlerTestHost.CreateServices();
+        var req = HandlerTestHost.CreateRequest(
+            services,
+            headers: new Dictionary<string, StringValues> { ["X-Ids"] = new(["1", "2,3"]) });
+
+        var result = await HttpFunction.HeaderArray_Handler(req, HandlerTestHost.CreateContext(services));
+
+        Assert.Equal(200, HandlerTestHost.StatusOf(result));
+        var body = HandlerTestHost.ValueOf<int[]>(result);
+        Assert.NotNull(body);
+        Assert.Equal([1, 2, 3], body);
+    }
+
+    [Fact]
+    public async Task HeaderArrayHandlerMissingHeaderReturns200WithEmptyArray()
+    {
+        var services = HandlerTestHost.CreateServices();
+        var req = HandlerTestHost.CreateRequest(services);
+
+        var result = await HttpFunction.HeaderArray_Handler(req, HandlerTestHost.CreateContext(services));
+
+        Assert.Equal(200, HandlerTestHost.StatusOf(result));
+        var body = HandlerTestHost.ValueOf<int[]>(result);
+        Assert.NotNull(body);
+        Assert.Empty(body);
+    }
+
+    [Fact]
+    public async Task HeaderArrayHandlerInvalidElementReturns400()
+    {
+        var services = HandlerTestHost.CreateServices();
+        var req = HandlerTestHost.CreateRequest(
+            services,
+            headers: new Dictionary<string, StringValues> { ["X-Ids"] = "1,abc" });
+
+        var result = await HttpFunction.HeaderArray_Handler(req, HandlerTestHost.CreateContext(services));
+
+        Assert.Equal(400, HandlerTestHost.StatusOf(result));
     }
 
     [Fact]

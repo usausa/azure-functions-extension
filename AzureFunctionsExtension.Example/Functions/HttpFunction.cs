@@ -37,6 +37,12 @@ internal sealed partial class HttpFunction
     private static readonly Action<ILogger, string, Exception?> GreetLog =
         LoggerMessage.Define<string>(LogLevel.Information, new EventId(8, nameof(Greet)), "Greet request. name=[{Name}]");
 
+    private static readonly Action<ILogger, int, Exception?> RouteArrayRequest =
+        LoggerMessage.Define<int>(LogLevel.Information, new EventId(9, nameof(RouteArray)), "Route array request. ids.Length=[{Length}]");
+
+    private static readonly Action<ILogger, int, Exception?> HeaderArrayRequest =
+        LoggerMessage.Define<int>(LogLevel.Information, new EventId(10, nameof(HeaderArray)), "Header array request. ids.Length=[{Length}]");
+
     private readonly ILogger<HttpFunction> log;
 
     public HttpFunction(ILogger<HttpFunction> log)
@@ -91,12 +97,26 @@ internal sealed partial class HttpFunction
         return Results.Ok(new ItemResponse { Id = id, Name = $"Item-{id}" });
     }
 
+    [HttpEndpoint("get", "route-array/{ids}", AuthorizationLevel.Anonymous)]
+    public IActionResult RouteArray([FromRoute] int[] ids)
+    {
+        RouteArrayRequest(log, ids.Length, null);
+        return Results.Ok(ids);
+    }
+
     // [FromHeader] — custom HTTP header binding
     [HttpEndpoint("get", "header-echo", AuthorizationLevel.Anonymous)]
     public IActionResult HeaderEcho([FromHeader("X-Correlation-Id")] string? correlationId)
     {
         HeaderRequest(log, correlationId, null);
         return Results.Ok(new { CorrelationId = correlationId ?? "(none)" });
+    }
+
+    [HttpEndpoint("get", "header-array", AuthorizationLevel.Anonymous)]
+    public IActionResult HeaderArray([FromHeader("X-Ids")] int[] ids)
+    {
+        HeaderArrayRequest(log, ids.Length, null);
+        return Results.Ok(ids);
     }
 
     // ApiException — returns 404 when item is not found

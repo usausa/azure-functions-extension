@@ -409,6 +409,73 @@ public sealed class GeneratorTests
         Assert.Contains("TryToInt32", result.GeneratedCode, StringComparison.Ordinal);
     }
 
+    [Theory]
+    [InlineData("sample", "[AzureFunctionsExtension.Annotations.FromQuery] int[] ids", "req.Query.TryGetValue(\"ids\", out var p0raw)")]
+    [InlineData("sample", "[AzureFunctionsExtension.Annotations.FromHeader(\"x-ids\")] int[] ids", "req.Headers.TryGetValue(\"x-ids\", out var p0raw)")]
+    [InlineData("sample", "[AzureFunctionsExtension.Annotations.FromHeader(\"x-ids\")] string[] ids", "req.Headers.TryGetValue(\"x-ids\", out var p0raw)")]
+    [InlineData("sample", "[AzureFunctionsExtension.Annotations.FromHeader(\"x-ids\")] int?[] ids", "req.Headers.TryGetValue(\"x-ids\", out var p0raw)")]
+    [InlineData("items/{ids}", "[AzureFunctionsExtension.Annotations.FromRoute] int[] ids", "p0rawobj is string p0raw")]
+    [InlineData("items/{ids}", "[AzureFunctionsExtension.Annotations.FromRoute] string[] ids", "p0rawobj is string p0raw")]
+    [InlineData("items/{ids}", "[AzureFunctionsExtension.Annotations.FromRoute] int?[] ids", "p0rawobj is string p0raw")]
+    public void GeneratesCommaSeparatedArrayBinding(string route, string parameter, string expected)
+    {
+        var source = $$"""
+            namespace TestFunctions;
+
+            using AzureFunctionsExtension.Annotations;
+            using Microsoft.AspNetCore.Mvc;
+
+            [AzureFunction]
+            public sealed partial class SampleFunction
+            {
+                [HttpEndpoint("get", "{{route}}")]
+                public IActionResult Run({{parameter}}) => new EmptyResult();
+            }
+            """;
+
+        var result = RunGenerator(source);
+
+        Assert.Empty(GetProblemIds(source));
+        Assert.Contains(expected, result.GeneratedCode, StringComparison.Ordinal);
+        Assert.Contains(".Split(',')", result.GeneratedCode, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void GeneratesCommaSeparatedArrayBindingWithFilter()
+    {
+        const string source =
+            """
+            namespace TestFunctions;
+
+            using AzureFunctionsExtension.Annotations;
+            using AzureFunctionsExtension.Filters;
+            using Microsoft.AspNetCore.Mvc;
+            using System.Threading.Tasks;
+
+            public class TestFilter : IFunctionFilter
+            {
+                public ValueTask InvokeAsync(FunctionInvocationContext ctx, FunctionFilterDelegate next)
+                    => next(ctx);
+            }
+
+            [AzureFunction]
+            [Filter<TestFilter>]
+            public sealed partial class SampleFunction
+            {
+                [HttpEndpoint("get", "items/{ids}")]
+                public IActionResult Run(
+                    [AzureFunctionsExtension.Annotations.FromRoute] int?[] ids,
+                    [AzureFunctionsExtension.Annotations.FromHeader("x-codes")] int[] codes) => new EmptyResult();
+            }
+            """;
+
+        var result = RunGenerator(source);
+
+        Assert.Empty(GetProblemIds(source));
+        Assert.Contains("ctx.Result = new global::Microsoft.AspNetCore.Mvc.BadRequestObjectResult(\"Invalid parameter: ids\");", result.GeneratedCode, StringComparison.Ordinal);
+        Assert.Contains("ctx.Result = new global::Microsoft.AspNetCore.Mvc.BadRequestObjectResult(\"Invalid parameter: x-codes\");", result.GeneratedCode, StringComparison.Ordinal);
+    }
+
     //--------------------------------------------------------------------------------
     // Default value binding
     //--------------------------------------------------------------------------------
