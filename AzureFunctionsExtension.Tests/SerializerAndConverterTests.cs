@@ -3,6 +3,7 @@ namespace AzureFunctionsExtension.Tests;
 using System.Globalization;
 using System.Text;
 using System.Text.Json;
+using System.Text.Json.Serialization;
 
 using AzureFunctionsExtension;
 using AzureFunctionsExtension.Binders;
@@ -28,24 +29,24 @@ public sealed class SerializerAndConverterTests
 
     private sealed class CustomBodySerializer : IBodySerializer
     {
-        public T? Deserialize<T>(Stream body) => default;
+        public ValueTask<T?> DeserializeAsync<T>(Stream body, CancellationToken cancellationToken) => default;
 
         public Task SerializeAsync<T>(Stream output, T value, CancellationToken ct) => Task.CompletedTask;
     }
 
     [Fact]
-    public void ConfiguredNamingPolicyIsAppliedToDeserialization()
+    public async Task ConfiguredNamingPolicyIsAppliedToDeserialization()
     {
         var services = new ServiceCollection();
         services.AddAzureFunctionExtension(static o => o.Options.PropertyNamingPolicy = JsonNamingPolicy.SnakeCaseLower);
 
-        using var provider = services.BuildServiceProvider();
+        await using var provider = services.BuildServiceProvider();
         var serializer = provider.GetRequiredService<IBodySerializer>();
 
 #pragma warning disable IDE0028
         using var stream = new MemoryStream("""{"user_name":"abc"}"""u8.ToArray());
 #pragma warning restore IDE0028
-        var result = serializer.Deserialize<SnakeCasePayload>(stream);
+        var result = await serializer.DeserializeAsync<SnakeCasePayload>(stream, CancellationToken.None);
 
         Assert.NotNull(result);
         Assert.Equal("abc", result.UserName);
@@ -68,18 +69,18 @@ public sealed class SerializerAndConverterTests
     }
 
     [Fact]
-    public void DefaultRegistrationUsesWebDefaultsCaseInsensitive()
+    public async Task DefaultRegistrationUsesWebDefaultsCaseInsensitive()
     {
         var services = new ServiceCollection();
         services.AddAzureFunctionExtension();
 
-        using var provider = services.BuildServiceProvider();
+        await using var provider = services.BuildServiceProvider();
         var serializer = provider.GetRequiredService<IBodySerializer>();
 
 #pragma warning disable IDE0028
         using var stream = new MemoryStream("""{"VALUE":1}"""u8.ToArray());
 #pragma warning restore IDE0028
-        var result = serializer.Deserialize<ValuePayload>(stream);
+        var result = await serializer.DeserializeAsync<ValuePayload>(stream, CancellationToken.None);
 
         Assert.Equal(new ValuePayload { Value = 1 }, result);
     }
@@ -112,6 +113,32 @@ public sealed class SerializerAndConverterTests
     }
 
     //--------------------------------------------------------------------------------
+    // JsonBodySerializer: asynchronous reading
+    //--------------------------------------------------------------------------------
+
+    [Fact]
+    public async Task DeserializeAsyncDoesNotReadSynchronously()
+    {
+        var serializer = new JsonBodySerializer(new JsonSerializerOptions(JsonSerializerDefaults.Web));
+        await using var stream = new SyncReadDisallowedStream("""{"value":1}"""u8);
+
+        var result = await serializer.DeserializeAsync<ValuePayload>(stream, CancellationToken.None);
+
+        Assert.Equal(new ValuePayload { Value = 1 }, result);
+    }
+
+    [Fact]
+    public async Task DeserializeAsyncWithContextDoesNotReadSynchronously()
+    {
+        var serializer = new JsonBodySerializer(BodyJsonContext.Default);
+        await using var stream = new SyncReadDisallowedStream("""{"name":"abc"}"""u8);
+
+        var result = await serializer.DeserializeAsync<ContextPayload>(stream, CancellationToken.None);
+
+        Assert.Equal(new ContextPayload("abc"), result);
+    }
+
+    //--------------------------------------------------------------------------------
     // StringConverter culture independence
     //--------------------------------------------------------------------------------
 
@@ -135,3 +162,9 @@ public sealed class SerializerAndConverterTests
         }
     }
 }
+
+internal sealed record ContextPayload(string Name);
+
+[JsonSourceGenerationOptions(JsonSerializerDefaults.Web)]
+[JsonSerializable(typeof(ContextPayload))]
+internal sealed partial class BodyJsonContext : JsonSerializerContext;

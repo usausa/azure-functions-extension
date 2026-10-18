@@ -409,6 +409,68 @@ public class DiagnosticTests
     }
 
     [Fact]
+    public void Afe0205HandlerNameDuplicatedWithWorkerFunctionEmitsDiagnostic()
+    {
+        const string source =
+            """
+            namespace TestFunctions;
+
+            using AzureFunctionsExtension.Annotations;
+            using Microsoft.AspNetCore.Http;
+            using Microsoft.AspNetCore.Mvc;
+            using Microsoft.Azure.Functions.Worker;
+
+            [AzureFunction]
+            public sealed partial class SampleFunction
+            {
+                [HttpEndpoint("get", "hello")]
+                public IActionResult Hello() => new EmptyResult();
+            }
+
+            public static class PlainFunction
+            {
+                [Function("hello")]
+                public static IActionResult Run([HttpTrigger(AuthorizationLevel.Anonymous, "get")] HttpRequest req) => new EmptyResult();
+            }
+            """;
+
+        var problems = GetProblemIds(source);
+
+        Assert.Equal(["AFE0205"], problems);
+    }
+
+    [Fact]
+    public void Afe0205HandlerNameNotDuplicatedWithWorkerFunctionEmitsNoDiagnostic()
+    {
+        const string source =
+            """
+            namespace TestFunctions;
+
+            using AzureFunctionsExtension.Annotations;
+            using Microsoft.AspNetCore.Http;
+            using Microsoft.AspNetCore.Mvc;
+            using Microsoft.Azure.Functions.Worker;
+
+            [AzureFunction]
+            public sealed partial class SampleFunction
+            {
+                [HttpEndpoint("get", "hello")]
+                public IActionResult Hello() => new EmptyResult();
+            }
+
+            public static class PlainFunction
+            {
+                [Function("plain")]
+                public static IActionResult Run([HttpTrigger(AuthorizationLevel.Anonymous, "get")] HttpRequest req) => new EmptyResult();
+            }
+            """;
+
+        var problems = GetProblemIds(source);
+
+        Assert.Empty(problems);
+    }
+
+    [Fact]
     public void Afe0206BaseClassHandlerIsReportedOnce()
     {
         const string source =
@@ -471,6 +533,107 @@ public class DiagnosticTests
         var result = RunGenerator(source);
 
         Assert.Contains(result.Diagnostics, static d => d.Id == "AFE0301");
+    }
+
+    [Fact]
+    public void Afe0301CookieBindingUsedOnNonHttpHandlerEmitsDiagnostic()
+    {
+        const string source =
+            """
+            namespace TestFunctions;
+
+            using AzureFunctionsExtension.Annotations;
+
+            [AzureFunction]
+            public sealed partial class SampleFunction
+            {
+                [QueueEndpoint("my-queue")]
+                public void Run([FromCookie("session")] string session)
+                {
+                }
+            }
+            """;
+
+        var result = RunGenerator(source);
+
+        Assert.Contains(result.Diagnostics, static d => d.Id == "AFE0301");
+    }
+
+    [Theory]
+    [InlineData("[TimerEndpoint(\"0 */5 * * * *\")]")]
+    [InlineData("[QueueEndpoint(\"my-queue\")]")]
+    public void Afe0301ClaimsPrincipalUsedOnNonHttpHandlerEmitsDiagnostic(string attribute)
+    {
+        var source = $$"""
+            namespace TestFunctions;
+
+            using System.Security.Claims;
+            using AzureFunctionsExtension.Annotations;
+
+            [AzureFunction]
+            public sealed partial class SampleFunction
+            {
+                {{attribute}}
+                public void Run(ClaimsPrincipal user)
+                {
+                }
+            }
+            """;
+
+        var result = RunGenerator(source);
+
+        Assert.Contains(result.Diagnostics, static d => d.Id == "AFE0301");
+        Assert.DoesNotContain(result.Diagnostics, static d => d.Id == "AFE0304");
+    }
+
+    [Theory]
+    [InlineData("[TimerEndpoint(\"0 */5 * * * *\")]")]
+    [InlineData("[QueueEndpoint(\"my-queue\")]")]
+    public void Afe0301HttpRequestUsedOnNonHttpHandlerEmitsDiagnostic(string attribute)
+    {
+        var source = $$"""
+            namespace TestFunctions;
+
+            using AzureFunctionsExtension.Annotations;
+            using Microsoft.AspNetCore.Http;
+
+            [AzureFunction]
+            public sealed partial class SampleFunction
+            {
+                {{attribute}}
+                public void Run(HttpRequest req)
+                {
+                }
+            }
+            """;
+
+        var problems = GetProblemIds(source);
+
+        Assert.Equal(["AFE0301"], problems);
+    }
+
+    [Fact]
+    public void Afe0301ClaimsPrincipalOnHttpHandlerEmitsNoDiagnostic()
+    {
+        const string source =
+            """
+            namespace TestFunctions;
+
+            using System.Security.Claims;
+            using AzureFunctionsExtension.Annotations;
+            using Microsoft.AspNetCore.Mvc;
+
+            [AzureFunction]
+            public sealed partial class SampleFunction
+            {
+                [HttpEndpoint("get", "sample")]
+                public IActionResult Run(ClaimsPrincipal user) => new EmptyResult();
+            }
+            """;
+
+        var problems = GetProblemIds(source);
+
+        Assert.Empty(problems);
     }
 
     [Fact]
@@ -583,6 +746,30 @@ public class DiagnosticTests
     }
 
     [Theory]
+    [InlineData("string[] values")]
+    [InlineData("int[] values")]
+    public void Afe0303CookieArrayEmitsDiagnostic(string parameter)
+    {
+        var source = $$"""
+            namespace TestFunctions;
+
+            using AzureFunctionsExtension.Annotations;
+            using Microsoft.AspNetCore.Mvc;
+
+            [AzureFunction]
+            public sealed partial class SampleFunction
+            {
+                [HttpEndpoint("get", "sample")]
+                public IActionResult Run([FromCookie("values")] {{parameter}}) => new EmptyResult();
+            }
+            """;
+
+        var problems = GetProblemIds(source);
+
+        Assert.Equal(["AFE0303"], problems);
+    }
+
+    [Theory]
     [InlineData("[TimerEndpoint(\"0 */5 * * * *\")]", "string payload")]
     [InlineData("[QueueEndpoint(\"queue\")]", "Payload payload")]
     public void Afe0304UnsupportedTriggerPayloadEmitsDiagnostic(string attribute, string parameter)
@@ -627,6 +814,44 @@ public class DiagnosticTests
             {
                 [HttpEndpoint("get", "sample")]
                 public IActionResult Run([Microsoft.AspNetCore.Mvc.FromHeader(Name = "x-id")] string id) => new EmptyResult();
+            }
+            """;
+
+        var result = RunGenerator(source);
+
+        Assert.Contains(result.Diagnostics, static d => d.Id == "AFE0305");
+    }
+
+    [Fact]
+    public void Afe0305ForeignCookieAttributeEmitsWarning()
+    {
+        const string source =
+            """
+            namespace Other
+            {
+                [System.AttributeUsage(System.AttributeTargets.Parameter)]
+                public sealed class FromCookieAttribute : System.Attribute
+                {
+                    public FromCookieAttribute(string name)
+                    {
+                        Name = name;
+                    }
+
+                    public string Name { get; }
+                }
+            }
+
+            namespace TestFunctions
+            {
+                using AzureFunctionsExtension.Annotations;
+                using Microsoft.AspNetCore.Mvc;
+
+                [AzureFunction]
+                public sealed partial class SampleFunction
+                {
+                    [HttpEndpoint("get", "sample")]
+                    public IActionResult Run([Other.FromCookie("session")] string session) => new EmptyResult();
+                }
             }
             """;
 
@@ -787,42 +1012,77 @@ public class DiagnosticTests
     // ------------------------------------------------------------
 
     [Fact]
-    public void Afe0601WorkerMetadataSourceGenEnabledEmitsDiagnostic()
+    public void Afe0601NotUsingAzureFunctionsSdkEmitsDiagnostic()
     {
         var problems = GetProblemIds(WorkerSource, new Dictionary<string, string>
         {
-            ["FunctionsEnableMetadataSourceGen"] = "true",
-            ["FunctionsAutoRegisterGeneratedMetadataProvider"] = "true",
-            ["FunctionsEnableExecutorSourceGen"] = "false",
-            ["FunctionsAutoRegisterGeneratedFunctionsExecutor"] = "true"
+            ["UsingAzureFunctionsSdk"] = string.Empty
         });
 
         Assert.Equal(["AFE0601"], problems);
     }
 
     [Fact]
-    public void Afe0601WorkerExecutorSourceGenEnabledEmitsDiagnostic()
+    public void Afe0601UsingAzureFunctionsSdkEmitsNoDiagnostic()
     {
         var problems = GetProblemIds(WorkerSource, new Dictionary<string, string>
         {
-            ["FunctionsEnableMetadataSourceGen"] = "false",
-            ["FunctionsAutoRegisterGeneratedMetadataProvider"] = "false",
-            ["FunctionsEnableExecutorSourceGen"] = "true",
-            ["FunctionsAutoRegisterGeneratedFunctionsExecutor"] = "true"
+            ["UsingAzureFunctionsSdk"] = "true"
+        });
+
+        Assert.Empty(problems);
+    }
+
+    [Fact]
+    public void Afe0602MetadataSourceGenDisabledEmitsDiagnostic()
+    {
+        var problems = GetProblemIds(WorkerSource, new Dictionary<string, string>
+        {
+            ["FunctionsEnableMetadataSourceGen"] = "false"
+        });
+
+        Assert.Equal(["AFE0602"], problems);
+    }
+
+    [Fact]
+    public void Afe0602MetadataProviderAutoRegisterDisabledEmitsDiagnostic()
+    {
+        var problems = GetProblemIds(WorkerSource, new Dictionary<string, string>
+        {
+            ["FunctionsAutoRegisterGeneratedMetadataProvider"] = "false"
+        });
+
+        Assert.Equal(["AFE0602"], problems);
+    }
+
+    [Fact]
+    public void Afe0601IsReportedInsteadOfAfe0602()
+    {
+        var problems = GetProblemIds(WorkerSource, new Dictionary<string, string>
+        {
+            ["UsingAzureFunctionsSdk"] = string.Empty,
+            ["FunctionsEnableMetadataSourceGen"] = "false"
         });
 
         Assert.Equal(["AFE0601"], problems);
     }
 
     [Fact]
-    public void Afe0601WorkerSourceGenDisabledEmitsNoDiagnostic()
+    public void BuildConfigurationIsNotCheckedWithoutAzureFunctionClass()
     {
-        var problems = GetProblemIds(WorkerSource, new Dictionary<string, string>
+        const string source =
+            """
+            namespace TestFunctions;
+
+            public sealed class PlainClass
+            {
+            }
+            """;
+
+        var problems = GetProblemIds(source, new Dictionary<string, string>
         {
-            ["FunctionsEnableMetadataSourceGen"] = "false",
-            ["FunctionsAutoRegisterGeneratedMetadataProvider"] = "false",
-            ["FunctionsEnableExecutorSourceGen"] = "false",
-            ["FunctionsAutoRegisterGeneratedFunctionsExecutor"] = "true"
+            ["UsingAzureFunctionsSdk"] = string.Empty,
+            ["FunctionsEnableMetadataSourceGen"] = "false"
         });
 
         Assert.Empty(problems);

@@ -23,6 +23,7 @@ internal static class FunctionModelBuilder
     private const string FromQueryAttributeName = "AzureFunctionsExtension.Annotations.FromQueryAttribute";
     private const string FromHeaderAttributeName = "AzureFunctionsExtension.Annotations.FromHeaderAttribute";
     private const string FromRouteAttributeName = "AzureFunctionsExtension.Annotations.FromRouteAttribute";
+    private const string FromCookieAttributeName = "AzureFunctionsExtension.Annotations.FromCookieAttribute";
     private const string FromServicesAttributeName = "AzureFunctionsExtension.Annotations.FromServicesAttribute";
     private const string FromTriggerAttributeName = "AzureFunctionsExtension.Annotations.FromTriggerAttribute";
 
@@ -33,6 +34,7 @@ internal static class FunctionModelBuilder
     private const string IActionResultFullName = "Microsoft.AspNetCore.Mvc.IActionResult";
 
     private const string CancellationTokenFullName = "System.Threading.CancellationToken";
+    private const string ClaimsPrincipalFullName = "System.Security.Claims.ClaimsPrincipal";
     // ReSharper restore InconsistentNaming
 
     // [AzureFunctionAttribute] が付与されたクラスから FunctionModel を構築するエントリーポイント。
@@ -83,16 +85,22 @@ internal static class FunctionModelBuilder
 
         var functionType = MakeTypeRef(symbol);
 
-        // Filter 属性を収集し、Order で昇順ソートしてパイプライン順序を確定する
-        // Collect Filter attributes and sort by Order to determine pipeline sequence
-        var filterAttrs = symbol.GetAttributes()
-            .Select(static (a, i) => (Attr: a, Index: i))
-            .Where(static x => IsFilterAttribute(x.Attr))
+        // アセンブリとクラスの Filter 属性を収集し、Order の昇順 (同じ Order ならアセンブリが外側) に並べてパイプライン順序を確定する
+        // Collect assembly-level and class-level Filter attributes and sort by Order (assembly-level outer for the same Order) to determine pipeline sequence
+        var assemblyFilters = context.SemanticModel.Compilation.Assembly.GetAttributes()
+            .Select(static (a, i) => (Attr: a, Level: 0, Index: i))
+            .Where(static x => IsFilterAttribute(x.Attr));
+        var classFilters = symbol.GetAttributes()
+            .Select(static (a, i) => (Attr: a, Level: 1, Index: i))
+            .Where(static x => IsFilterAttribute(x.Attr));
+        var filterAttrs = assemblyFilters
+            .Concat(classFilters)
+            .OrderBy(static x => GetFilterOrder(x.Attr))
+            .ThenBy(static x => x.Level)
+            .ThenBy(static x => x.Index)
             .ToArray();
 
         var sortedFilters = filterAttrs
-            .OrderBy(static x => GetFilterOrder(x.Attr))
-            .ThenBy(static x => x.Index)
             .Select(static x => MakeTypeRef(x.Attr.AttributeClass!.TypeArguments[0]))
             .ToArray();
 
@@ -163,6 +171,7 @@ internal static class FunctionModelBuilder
         var model = new FunctionModel(
             ns,
             symbol.Name,
+            GetMetadataName(symbol),
             symbol.IsValueType,
             functionType,
             new EquatableArray<TypeRefModel>(sortedFilters),
@@ -188,6 +197,20 @@ internal static class FunctionModelBuilder
         }
 
         return new EquatableArray<FunctionNameModel>(names.ToArray());
+    }
+
+    // ランタイムが EntryPoint の解決に使うメタデータ名 (エスケープ無し) を返す。ToDisplayString() はキーワードに @ を付けるため使わない
+    // Returns the metadata name (without escaping) used by the runtime to resolve the EntryPoint. ToDisplayString() is not used because it adds @ to keywords
+    private static string GetMetadataName(INamedTypeSymbol symbol)
+    {
+        var parts = new Stack<string>();
+        parts.Push(symbol.MetadataName);
+        for (var ns = symbol.ContainingNamespace; (ns is not null) && !ns.IsGlobalNamespace; ns = ns.ContainingNamespace)
+        {
+            parts.Push(ns.MetadataName);
+        }
+
+        return String.Join(".", parts);
     }
 
     private static bool IsEndpointAttribute(AttributeData attr) =>
@@ -308,6 +331,7 @@ internal static class FunctionModelBuilder
                     a.AttributeClass.HasFullyQualifiedMetadataName(FromQueryAttributeName) ||
                     a.AttributeClass.HasFullyQualifiedMetadataName(FromRouteAttributeName) ||
                     a.AttributeClass.HasFullyQualifiedMetadataName(FromHeaderAttributeName) ||
+                    a.AttributeClass.HasFullyQualifiedMetadataName(FromCookieAttributeName) ||
                     a.AttributeClass.HasFullyQualifiedMetadataName(FromBodyAttributeName));
                 if (hasHttpOnlyAttr)
                 {
@@ -322,6 +346,13 @@ internal static class FunctionModelBuilder
             var paramModel = BuildParameterModel(param, handlerType.Value, diagnostics);
             if (paramModel is null)
             {
+                return null;
+            }
+
+            if ((handlerType != HandlerType.Http) && (paramModel.BindingType is ParameterBindingType.HttpRequest or ParameterBindingType.User))
+            {
+                var loc = method.Locations.Length > 0 ? method.Locations[0] : null;
+                diagnostics.Add(new DiagnosticInfo(Diagnostics.InvalidBindingOnNonHttpHandler, loc, method.Name));
                 return null;
             }
 
@@ -419,7 +450,7 @@ internal static class FunctionModelBuilder
         foreach (var attr in param.GetAttributes())
         {
             if ((attr.AttributeClass is { } attrClass) &&
-                (attrClass.Name is "FromBodyAttribute" or "FromQueryAttribute" or "FromHeaderAttribute" or "FromRouteAttribute" or "FromServicesAttribute" or "FromTriggerAttribute") &&
+                (attrClass.Name is "FromBodyAttribute" or "FromQueryAttribute" or "FromHeaderAttribute" or "FromRouteAttribute" or "FromCookieAttribute" or "FromServicesAttribute" or "FromTriggerAttribute") &&
                 (attrClass.ContainingNamespace.ToDisplayString() != "AzureFunctionsExtension.Annotations"))
             {
                 warnings.Add(new DiagnosticInfo(
@@ -496,6 +527,16 @@ internal static class FunctionModelBuilder
                     key = nameArg!;
                 }
             }
+            else if (attrClass.HasFullyQualifiedMetadataName(FromCookieAttributeName))
+            {
+                bindingAttrCount++;
+                bindingType = ParameterBindingType.FromCookie;
+                var nameArg = attr.ConstructorArguments.Length > 0 ? attr.ConstructorArguments[0].Value as string : null;
+                if (!String.IsNullOrEmpty(nameArg))
+                {
+                    key = nameArg!;
+                }
+            }
             else if (attrClass.HasFullyQualifiedMetadataName(FromServicesAttributeName))
             {
                 bindingAttrCount++;
@@ -550,6 +591,11 @@ internal static class FunctionModelBuilder
                 bindingType = ParameterBindingType.Logger;
                 converterMethod = string.Empty;
             }
+            else if (paramType.HasFullyQualifiedMetadataName(ClaimsPrincipalFullName))
+            {
+                bindingType = ParameterBindingType.User;
+                converterMethod = string.Empty;
+            }
             else if (handlerType != HandlerType.Http)
             {
                 bindingType = ParameterBindingType.FromTrigger;
@@ -590,12 +636,14 @@ internal static class FunctionModelBuilder
             ParameterBindingType.Context or
             ParameterBindingType.CancellationToken or
             ParameterBindingType.Logger or
+            ParameterBindingType.User or
             ParameterBindingType.FromServices or
             ParameterBindingType.FromTrigger or
             ParameterBindingType.FromBody => true,
             ParameterBindingType.FromQuery or
             ParameterBindingType.FromHeader or
             ParameterBindingType.FromRoute => IsSupportedTextBindingType(type, converterMethod),
+            ParameterBindingType.FromCookie => (type is not IArrayTypeSymbol) && IsSupportedTextBindingType(type, converterMethod),
             _ => false
         };
     }

@@ -43,14 +43,14 @@ public sealed class JsonBodySerializer : IBodySerializer
 
     [UnconditionalSuppressMessage("Trimming", "IL2026", Justification = "Reflection path is used only when constructed with JsonSerializerOptions.")]
     [UnconditionalSuppressMessage("AOT", "IL3050", Justification = "Reflection path is used only when constructed with JsonSerializerOptions.")]
-    public T? Deserialize<T>(Stream body)
+    public async ValueTask<T?> DeserializeAsync<T>(Stream body, CancellationToken cancellationToken)
     {
         if (context is not null)
         {
-            return (T?)JsonSerializer.Deserialize(body, typeof(T), context);
+            return (T?)await JsonSerializer.DeserializeAsync(body, typeof(T), context, cancellationToken).ConfigureAwait(false);
         }
 
-        return JsonSerializer.Deserialize<T>(body, options);
+        return await JsonSerializer.DeserializeAsync<T>(body, options, cancellationToken).ConfigureAwait(false);
     }
 
     [UnconditionalSuppressMessage("Trimming", "IL2026", Justification = "Reflection path is used only when constructed with JsonSerializerOptions.")]

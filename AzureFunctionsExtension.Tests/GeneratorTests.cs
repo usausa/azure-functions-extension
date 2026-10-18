@@ -472,8 +472,8 @@ public sealed class GeneratorTests
         var result = RunGenerator(source);
 
         Assert.Empty(GetProblemIds(source));
-        Assert.Contains("ctx.Result = new global::Microsoft.AspNetCore.Mvc.BadRequestObjectResult(\"Invalid parameter: ids\");", result.GeneratedCode, StringComparison.Ordinal);
-        Assert.Contains("ctx.Result = new global::Microsoft.AspNetCore.Mvc.BadRequestObjectResult(\"Invalid parameter: x-codes\");", result.GeneratedCode, StringComparison.Ordinal);
+        Assert.Contains("ctx.Result = __BindingErrorResult__(services, new global::AzureFunctionsExtension.Binders.BindingError(global::AzureFunctionsExtension.Binders.BindingErrorKind.InvalidValue, global::AzureFunctionsExtension.Binders.BindingSource.Route, \"ids\"), \"Invalid parameter: ids\");", result.GeneratedCode, StringComparison.Ordinal);
+        Assert.Contains("ctx.Result = __BindingErrorResult__(services, new global::AzureFunctionsExtension.Binders.BindingError(global::AzureFunctionsExtension.Binders.BindingErrorKind.InvalidValue, global::AzureFunctionsExtension.Binders.BindingSource.Header, \"x-codes\"), \"Invalid parameter: x-codes\");", result.GeneratedCode, StringComparison.Ordinal);
     }
 
     //--------------------------------------------------------------------------------
@@ -731,7 +731,7 @@ public sealed class GeneratorTests
 
         AssertNoGeneratorErrors(result);
         Assert.Contains("?)1;", result.GeneratedCode, StringComparison.Ordinal);
-        Assert.Contains("ctx.Result = new global::Microsoft.AspNetCore.Mvc.BadRequestObjectResult", result.GeneratedCode, StringComparison.Ordinal);
+        Assert.Contains("ctx.Result = __BindingErrorResult__(services, new global::AzureFunctionsExtension.Binders.BindingError(global::AzureFunctionsExtension.Binders.BindingErrorKind.InvalidValue, global::AzureFunctionsExtension.Binders.BindingSource.Query, \"page\"), \"Invalid parameter: page\");", result.GeneratedCode, StringComparison.Ordinal);
     }
 
     //--------------------------------------------------------------------------------
@@ -769,6 +769,47 @@ public sealed class GeneratorTests
         AssertNoGeneratorErrors(result);
         Assert.Contains("catch (global::System.Text.Json.JsonException)", result.GeneratedCode, StringComparison.Ordinal);
         Assert.Contains("Request body is required.", result.GeneratedCode, StringComparison.Ordinal);
+    }
+
+    [Theory]
+    [InlineData(false, "context.CancellationToken")]
+    [InlineData(true, "ctx.CancellationToken")]
+    public void GeneratesAsynchronousBodyDeserialization(bool hasFilter, string cancellationToken)
+    {
+        var source =
+            $$"""
+            namespace TestFunctions;
+
+            using AzureFunctionsExtension.Annotations;
+            using AzureFunctionsExtension.Filters;
+            using Microsoft.AspNetCore.Mvc;
+            using System.Threading.Tasks;
+
+            public class TestFilter : IFunctionFilter
+            {
+                public ValueTask InvokeAsync(FunctionInvocationContext ctx, FunctionFilterDelegate next)
+                    => next(ctx);
+            }
+
+            public sealed class Payload
+            {
+                public string Name { get; set; } = string.Empty;
+            }
+
+            [AzureFunction]
+            {{(hasFilter ? "[Filter<TestFilter>]" : string.Empty)}}
+            public sealed partial class SampleFunction
+            {
+                [HttpEndpoint("post", "sample")]
+                public IActionResult Run([AzureFunctionsExtension.Annotations.FromBody] Payload payload) => new EmptyResult();
+            }
+            """;
+
+        var result = RunGenerator(source);
+
+        Assert.Empty(GetProblemIds(source));
+        Assert.Contains($"p0 = await bodySerializer0.DeserializeAsync<global::TestFunctions.Payload>(req.Body, {cancellationToken});", result.GeneratedCode, StringComparison.Ordinal);
+        Assert.DoesNotContain(".Deserialize<", result.GeneratedCode, StringComparison.Ordinal);
     }
 
     //--------------------------------------------------------------------------------
@@ -821,7 +862,7 @@ public sealed class GeneratorTests
 
         Assert.Empty(GetProblemIds(source));
         Assert.Contains("""req.Query.TryGetValue("a\"{b}", """, result.GeneratedCode, StringComparison.Ordinal);
-        Assert.Contains("""("Invalid parameter: a\"{b}")""", result.GeneratedCode, StringComparison.Ordinal);
+        Assert.Contains("""BindingSource.Query, "a\"{b}"), "Invalid parameter: a\"{b}");""", result.GeneratedCode, StringComparison.Ordinal);
     }
 
     [Fact]

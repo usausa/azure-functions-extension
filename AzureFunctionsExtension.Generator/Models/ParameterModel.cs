@@ -6,9 +6,11 @@ internal enum ParameterBindingType
     Context,
     Logger,
     CancellationToken,
+    User,
     FromQuery,
     FromHeader,
     FromRoute,
+    FromCookie,
     FromBody,
     FromServices,
     FromTrigger

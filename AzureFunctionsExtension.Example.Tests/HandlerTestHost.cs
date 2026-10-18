@@ -18,7 +18,7 @@ using Microsoft.Extensions.Primitives;
 
 internal static class HandlerTestHost
 {
-    public static IServiceProvider CreateServices()
+    public static IServiceProvider CreateServices(Action<IServiceCollection>? configure = null)
     {
         var services = new ServiceCollection();
         services.AddLogging();
@@ -27,7 +27,10 @@ internal static class HandlerTestHost
         services.AddTransient<HttpFunction>();
         services.AddTransient<QueueFunction>();
         services.AddTransient<FilterFunction>();
+        services.AddTransient<UserFunction>();
         services.AddTransient<LoggingFilter>();
+        services.AddTransient<RequestIdFilter>();
+        configure?.Invoke(services);
         return services.BuildServiceProvider();
     }
 

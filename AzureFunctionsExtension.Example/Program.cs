@@ -1,31 +1,38 @@
 using AzureFunctionsExtension;
+using AzureFunctionsExtension.Binders;
+using AzureFunctionsExtension.Example.Binders;
 using AzureFunctionsExtension.Example.Functions;
+using AzureFunctionsExtension.Example.Middleware;
 
-using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Extensions.Hosting;
+using Microsoft.Azure.Functions.Worker.Builder;
 
 KeepExampleTypesAlive();
 
-var host = new HostBuilder()
-    .ConfigureFunctionsWebApplication()
-    .ConfigureServices(static services =>
-    {
-        services.AddAzureFunctionExtension();
-        services.AddSingleton<IGreetingService, GreetingService>();
-        services.AddTransient<HttpFunction>();
-        services.AddTransient<QueueFunction>();
-        services.AddTransient<FilterFunction>();
-        services.AddTransient<LoggingFilter>();
-    })
-    .Build();
+var builder = FunctionsApplication.CreateBuilder(args);
+builder.ConfigureFunctionsWebApplication();
+builder.UseMiddleware<ClientPrincipalMiddleware>();
 
-host.Run();
+builder.Services.AddAzureFunctionExtension();
+builder.Services.AddSingleton<IBindingErrorResultFactory, BindingErrorResultFactory>();
+builder.Services.AddSingleton<IGreetingService, GreetingService>();
+builder.Services.AddTransient<HttpFunction>();
+builder.Services.AddTransient<QueueFunction>();
+builder.Services.AddTransient<FilterFunction>();
+builder.Services.AddTransient<UserFunction>();
+builder.Services.AddTransient<LoggingFilter>();
+builder.Services.AddTransient<RequestIdFilter>();
+
+builder.Build().Run();
 
 static void KeepExampleTypesAlive()
 {
     _ = new GreetingService();
     _ = new LoggingFilter();
+    _ = new RequestIdFilter();
+    _ = new BindingErrorResultFactory();
+    _ = new ClientPrincipalMiddleware();
     _ = new HttpFunction(null!);
     _ = new QueueFunction(null!);
     _ = new FilterFunction(null!);
+    _ = new UserFunction(null!);
 }

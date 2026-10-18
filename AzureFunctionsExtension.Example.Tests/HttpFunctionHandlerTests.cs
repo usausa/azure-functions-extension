@@ -1,6 +1,7 @@
 namespace AzureFunctionsExtension.Example.Tests;
 
 using System.Collections.Generic;
+using System.Text;
 
 using AzureFunctionsExtension.Example.Functions;
 using AzureFunctionsExtension.Example.Models;
@@ -91,6 +92,21 @@ public sealed class HttpFunctionHandlerTests
         var result = await HttpFunction.Body_Handler(req, HandlerTestHost.CreateContext(services));
 
         Assert.Equal(400, HandlerTestHost.StatusOf(result));
+    }
+
+    [Fact]
+    public async Task BodyHandlerReadsBodyWithoutSynchronousIo()
+    {
+        var services = HandlerTestHost.CreateServices();
+        var req = HandlerTestHost.CreateRequest(services);
+        req.Body = new SyncReadDisallowedStream(Encoding.UTF8.GetBytes(HandlerTestHost.Json(new { id = 1, name = "widget" })));
+
+        var result = await HttpFunction.Body_Handler(req, HandlerTestHost.CreateContext(services));
+
+        Assert.Equal(200, HandlerTestHost.StatusOf(result));
+        var body = HandlerTestHost.ValueOf<BodyResponse>(result);
+        Assert.NotNull(body);
+        Assert.Equal("widget", body.Name);
     }
 
     [Fact]
@@ -268,6 +284,21 @@ public sealed class HttpFunctionHandlerTests
         var services = HandlerTestHost.CreateServices();
         var json = HandlerTestHost.Json(new { name = "World" });
         var req = HandlerTestHost.CreateRequest(services, body: json);
+
+        var result = await HttpFunction.Greet_Handler(req, HandlerTestHost.CreateContext(services));
+
+        Assert.Equal(200, HandlerTestHost.StatusOf(result));
+        var body = HandlerTestHost.ValueOf<GreetResponse>(result);
+        Assert.NotNull(body);
+        Assert.Equal("Hello, World!", body.Message);
+    }
+
+    [Fact]
+    public async Task GreetHandlerReadsBodyWithoutSynchronousIo()
+    {
+        var services = HandlerTestHost.CreateServices();
+        var req = HandlerTestHost.CreateRequest(services);
+        req.Body = new SyncReadDisallowedStream(Encoding.UTF8.GetBytes(HandlerTestHost.Json(new { name = "World" })));
 
         var result = await HttpFunction.Greet_Handler(req, HandlerTestHost.CreateContext(services));
 

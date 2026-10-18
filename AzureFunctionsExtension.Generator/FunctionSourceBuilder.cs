@@ -27,9 +27,14 @@ internal static class FunctionSourceBuilder
     private const string RequestValidatorType = "global::AzureFunctionsExtension.Validation.IRequestValidator";
     private const string DefaultRequestValidatorType = "global::AzureFunctionsExtension.Validation.DataAnnotationsRequestValidator";
     private const string ApiExceptionType = "global::AzureFunctionsExtension.ApiException";
+    private const string CancellationOptionsType = "global::AzureFunctionsExtension.FunctionCancellationOptions";
     private const string InvalidOperationExceptionType = "global::System.InvalidOperationException";
     private const string JsonExceptionType = "global::System.Text.Json.JsonException";
     private const string StringConverterType = "global::AzureFunctionsExtension.Binders.StringConverter";
+    private const string BindingErrorType = "global::AzureFunctionsExtension.Binders.BindingError";
+    private const string BindingErrorKindType = "global::AzureFunctionsExtension.Binders.BindingErrorKind";
+    private const string BindingSourceType = "global::AzureFunctionsExtension.Binders.BindingSource";
+    private const string BindingErrorResultFactoryType = "global::AzureFunctionsExtension.Binders.IBindingErrorResultFactory";
     private const string GetRequiredService = "global::Microsoft.Extensions.DependencyInjection.ServiceProviderServiceExtensions.GetRequiredService";
     private const string GetRequiredKeyedService = "global::Microsoft.Extensions.DependencyInjection.ServiceProviderKeyedServiceExtensions.GetRequiredKeyedService";
     private const string GetService = "global::Microsoft.Extensions.DependencyInjection.ServiceProviderServiceExtensions.GetService";
@@ -37,6 +42,7 @@ internal static class FunctionSourceBuilder
     private const string GetLoggerMethod = "global::Microsoft.Azure.Functions.Worker.FunctionContextLoggerExtensions.GetLogger";
     private const string LogErrorMethod = "global::Microsoft.Extensions.Logging.LoggerExtensions.LogError";
     private const string AsSpanMethod = "global::System.MemoryExtensions.AsSpan";
+    private const string InvocationCancellationToken = "__cts__?.Token ?? context.CancellationToken";
     // ReSharper restore InconsistentNaming
 
     // クラス全体で共有する静的フィールド (target/provider/serializer/filter など) を含む
@@ -59,6 +65,14 @@ internal static class FunctionSourceBuilder
         var classKeyword = model.IsValueType ? "struct" : "class";
         builder.AppendLine($"partial {classKeyword} {CSharpIdentifier.EscapeTypeName(model.ClassName)}");
         builder.BeginScope();
+        if (model.Handlers.Any(static x => x.Type == HandlerType.Http))
+        {
+            // 読み取りと検証の失敗の応答を作る。部品は失敗したときだけ呼び出しのスコープから取り出し、登録がなければ文字列の 400 にする
+            // Creates the response for a binding or validation failure. The factory is resolved from the invocation scope only on failure, and a text 400 is used without the registration
+            builder.AppendLine($"private static {IActionResultType} __BindingErrorResult__(global::System.IServiceProvider services, {BindingErrorType} error, string message) =>");
+            builder.AppendLine($"    {GetService}<{BindingErrorResultFactoryType}>(services)?.Create(error) ?? new {BadRequestResultType}(message);");
+        }
+
         builder.EndScope();
     }
 
@@ -202,16 +216,16 @@ internal static class FunctionSourceBuilder
     // Without filters: binds parameters and invokes directly with exception handling.
     private static void BuildHttpHandlerMethod(SourceBuilder builder, FunctionModel model, HandlerModel handler, bool hasFilters)
     {
-        var authLevel = $"global::Microsoft.Azure.Functions.Worker.AuthorizationLevel.{handler.AuthorizationLevel ?? "Function"}";
-        var httpMethod = handler.HttpMethod ?? "get";
-        var route = handler.Route ?? handler.MethodName;
+        var authLevel = $"global::Microsoft.Azure.Functions.Worker.AuthorizationLevel.{handler.GetAuthorizationLevel()}";
+        var httpMethod = handler.GetHttpMethod();
+        var route = handler.GetRoute();
 
-        builder.AppendLine($"public static async global::System.Threading.Tasks.Task<{IActionResultType}> {handler.MethodName}_Handler(");
+        builder.AppendLine($"public static async global::System.Threading.Tasks.Task<{IActionResultType}> {handler.GetEntryPointMethodName()}(");
         builder.AppendLine($"    [{HttpTriggerType}({authLevel}, {CSharpLiteral.Format(httpMethod)}, Route = {CSharpLiteral.Format(route)})] {HttpRequestType} req,");
         builder.AppendLine($"    {FunctionContextType} context)");
         builder.BeginScope();
 
-        BuildInvocationSetup(builder, model);
+        BuildInvocationSetup(builder, model, handler);
         builder.NewLine();
 
         if (hasFilters)
@@ -220,7 +234,7 @@ internal static class FunctionSourceBuilder
             builder.BeginScope();
             builder.AppendLine("Request = req,");
             builder.AppendLine("FunctionContext = context,");
-            builder.AppendLine("CancellationToken = context.CancellationToken,");
+            builder.AppendLine($"CancellationToken = {InvocationCancellationToken},");
             builder.EndScope(semicolon: true);
             builder.AppendLine($"var pipeline = Build{ToPascalCase(handler.MethodName)}Pipeline(services, target);");
             builder.NewLine();
@@ -270,14 +284,14 @@ internal static class FunctionSourceBuilder
     // Without filters: resolves FromServices parameters and invokes directly.
     private static void BuildTimerHandlerMethod(SourceBuilder builder, FunctionModel model, HandlerModel handler, bool hasFilters)
     {
-        var schedule = handler.TimerSchedule ?? "0 * * * * *";
+        var schedule = handler.GetTimerSchedule();
 
-        builder.AppendLine($"public static async global::System.Threading.Tasks.Task {handler.MethodName}_Handler(");
+        builder.AppendLine($"public static async global::System.Threading.Tasks.Task {handler.GetEntryPointMethodName()}(");
         builder.AppendLine($"    [{TimerTriggerType}({CSharpLiteral.Format(schedule)})] {TimerInfoType} timerInfo,");
         builder.AppendLine($"    {FunctionContextType} context)");
         builder.BeginScope();
 
-        BuildInvocationSetup(builder, model);
+        BuildInvocationSetup(builder, model, handler);
         builder.NewLine();
 
         if (hasFilters)
@@ -286,7 +300,7 @@ internal static class FunctionSourceBuilder
             builder.BeginScope();
             builder.AppendLine("Request = timerInfo,");
             builder.AppendLine("FunctionContext = context,");
-            builder.AppendLine("CancellationToken = context.CancellationToken,");
+            builder.AppendLine($"CancellationToken = {InvocationCancellationToken},");
             builder.EndScope(semicolon: true);
             builder.AppendLine($"var pipeline = Build{ToPascalCase(handler.MethodName)}Pipeline(services, target);");
             builder.NewLine();
@@ -325,15 +339,15 @@ internal static class FunctionSourceBuilder
     // Without filters: resolves FromServices parameters and invokes directly.
     private static void BuildQueueHandlerMethod(SourceBuilder builder, FunctionModel model, HandlerModel handler, bool hasFilters)
     {
-        var queueName = handler.QueueName ?? "myqueue";
+        var queueName = handler.GetQueueName();
         var connectionPart = handler.QueueConnection is not null ? $", Connection = {CSharpLiteral.Format(handler.QueueConnection)}" : string.Empty;
 
-        builder.AppendLine($"public static async global::System.Threading.Tasks.Task {handler.MethodName}_Handler(");
+        builder.AppendLine($"public static async global::System.Threading.Tasks.Task {handler.GetEntryPointMethodName()}(");
         builder.AppendLine($"    [{QueueTriggerType}({CSharpLiteral.Format(queueName)}{connectionPart})] string message,");
         builder.AppendLine($"    {FunctionContextType} context)");
         builder.BeginScope();
 
-        BuildInvocationSetup(builder, model);
+        BuildInvocationSetup(builder, model, handler);
         builder.NewLine();
 
         if (hasFilters)
@@ -342,7 +356,7 @@ internal static class FunctionSourceBuilder
             builder.BeginScope();
             builder.AppendLine("Request = message,");
             builder.AppendLine("FunctionContext = context,");
-            builder.AppendLine("CancellationToken = context.CancellationToken,");
+            builder.AppendLine($"CancellationToken = {InvocationCancellationToken},");
             builder.EndScope(semicolon: true);
             builder.AppendLine($"var pipeline = Build{ToPascalCase(handler.MethodName)}Pipeline(services, target);");
             builder.NewLine();
@@ -377,10 +391,13 @@ internal static class FunctionSourceBuilder
     // Emits binding code for all parameters of an HTTP handler in order.
     private static void BuildParameterBindings(SourceBuilder builder, HandlerModel handler, bool hasFilter)
     {
+        var cancellationToken = hasFilter
+            ? "ctx.CancellationToken"
+            : HasCancellationTokenParameter(handler) ? InvocationCancellationToken : "context.CancellationToken";
         var parameters = handler.Parameters;
         for (var i = 0; i < parameters.Count; i++)
         {
-            BuildParameterBinding(builder, parameters[i], i, hasFilter);
+            BuildParameterBinding(builder, parameters[i], i, hasFilter, cancellationToken);
         }
     }
 
@@ -431,7 +448,7 @@ internal static class FunctionSourceBuilder
     // HttpRequest / FunctionContext / CancellationToken / Logger are passed directly at call site, so skipped here.
     // FromServices: DI resolution. FromBody: deserialize + validate.
     // FromQuery / FromRoute / FromHeader: string conversion then assignment.
-    private static void BuildParameterBinding(SourceBuilder builder, ParameterModel param, int index, bool hasFilter)
+    private static void BuildParameterBinding(SourceBuilder builder, ParameterModel param, int index, bool hasFilter, string cancellationToken)
     {
         var pVar = $"p{index}";
         var typeName = param.Type.FullName;
@@ -442,6 +459,7 @@ internal static class FunctionSourceBuilder
             case ParameterBindingType.Context:
             case ParameterBindingType.CancellationToken:
             case ParameterBindingType.Logger:
+            case ParameterBindingType.User:
                 return;
             case ParameterBindingType.FromServices:
                 builder.AppendLine($"var {pVar} = {ResolveServiceExpression(typeName, param.Key)};");
@@ -452,33 +470,17 @@ internal static class FunctionSourceBuilder
                 builder.AppendLine($"var {pVar} = default({typeName})!;");
                 builder.AppendLine("try");
                 builder.BeginScope();
-                builder.AppendLine($"{pVar} = bodySerializer{index}.Deserialize<{typeName}>(req.Body);");
+                builder.AppendLine($"{pVar} = await bodySerializer{index}.DeserializeAsync<{typeName}>(req.Body, {cancellationToken});");
                 builder.EndScope();
                 builder.AppendLine($"catch ({JsonExceptionType})");
                 builder.BeginScope();
-                if (hasFilter)
-                {
-                    builder.AppendLine($"ctx.Result = new {BadRequestResultType}(\"Invalid request body.\");");
-                    builder.AppendLine("return;");
-                }
-                else
-                {
-                    builder.AppendLine($"return new {BadRequestResultType}(\"Invalid request body.\");");
-                }
+                AppendBindingFailure(builder, hasFilter, NewBindingError("InvalidBody", "Body", param.Name), CSharpLiteral.Format("Invalid request body."));
                 builder.EndScope();
                 if (!param.IsNullableBodyParameter())
                 {
                     builder.AppendLine($"if ({pVar} is null)");
                     builder.BeginScope();
-                    if (hasFilter)
-                    {
-                        builder.AppendLine($"ctx.Result = new {BadRequestResultType}(\"Request body is required.\");");
-                        builder.AppendLine("return;");
-                    }
-                    else
-                    {
-                        builder.AppendLine($"return new {BadRequestResultType}(\"Request body is required.\");");
-                    }
+                    AppendBindingFailure(builder, hasFilter, NewBindingError("MissingBody", "Body", param.Name), CSharpLiteral.Format("Request body is required."));
                     builder.EndScope();
                 }
 
@@ -492,15 +494,7 @@ internal static class FunctionSourceBuilder
                     builder.AppendLine($"var {pVar}errors = new global::System.Collections.Generic.List<global::System.ComponentModel.DataAnnotations.ValidationResult>();");
                     builder.AppendLine($"_ = requestValidator{index}.Validate({pVar}, {pVar}errors);");
                     builder.AppendLine($"var {pVar}message = {CSharpLiteral.Format("Validation failed: " + param.Name)} + ({pVar}errors.Count > 0 ? \": \" + global::System.String.Join(\"; \", {pVar}errors) : \"\");");
-                    if (hasFilter)
-                    {
-                        builder.AppendLine($"ctx.Result = new {BadRequestResultType}({pVar}message);");
-                        builder.AppendLine("return;");
-                    }
-                    else
-                    {
-                        builder.AppendLine($"return new {BadRequestResultType}({pVar}message);");
-                    }
+                    AppendBindingFailure(builder, hasFilter, NewBindingError("ValidationFailed", "Body", param.Name, $"{pVar}errors"), $"{pVar}message");
                     builder.EndScope();
                 }
 
@@ -515,13 +509,16 @@ internal static class FunctionSourceBuilder
             case ParameterBindingType.FromHeader:
                 BuildHeaderBinding(builder, param, index, hasFilter);
                 return;
+            case ParameterBindingType.FromCookie:
+                BuildCookieBinding(builder, param, index, hasFilter);
+                return;
         }
     }
 
     // クエリ文字列またはヘッダー辞書から値を取り出し、スカラー / 配列 / Nullable のいずれかに変換するコードを出力する。
-    // 変換失敗時は BadRequest を返す (hasFilter の場合は ctx.Result にセットして return)。
+    // 変換失敗時は失敗の応答を返す (hasFilter の場合は ctx.Result にセットして return)。
     // Emits code to extract a value from a query/header dictionary and convert it to scalar, array, or Nullable.
-    // On conversion failure, returns BadRequest (or sets ctx.Result and returns when hasFilter is true).
+    // On conversion failure, returns the binding failure response (or sets ctx.Result and returns when hasFilter is true).
     private static void BuildScalarOrArrayBinding(SourceBuilder builder, ParameterModel param, int index, bool hasFilter, string dictExpr)
     {
         var pVar = $"p{index}";
@@ -562,15 +559,7 @@ internal static class FunctionSourceBuilder
                     : $"!{StringConverterType}.{converterMethod}({AsSpanMethod}({pRaw}.ToString()), out var {pVar}tmp)";
                 builder.AppendLine($"if ({converterCall})");
                 builder.BeginScope();
-                if (hasFilter)
-                {
-                    builder.AppendLine($"ctx.Result = new {BadRequestResultType}({InvalidParameterMessage(key)});");
-                    builder.AppendLine("return;");
-                }
-                else
-                {
-                    builder.AppendLine($"return new {BadRequestResultType}({InvalidParameterMessage(key)});");
-                }
+                AppendInvalidValue(builder, param, hasFilter);
                 builder.EndScope();
                 builder.AppendLine($"{pVar} = {pVar}tmp;");
             }
@@ -605,15 +594,7 @@ internal static class FunctionSourceBuilder
                     : $"!{StringConverterType}.{converterMethod}({AsSpanMethod}({pRaw}.ToString()), out {pVar})";
                 builder.AppendLine($"if ({converterCall})");
                 builder.BeginScope();
-                if (hasFilter)
-                {
-                    builder.AppendLine($"ctx.Result = new {BadRequestResultType}({InvalidParameterMessage(key)});");
-                    builder.AppendLine("return;");
-                }
-                else
-                {
-                    builder.AppendLine($"return new {BadRequestResultType}({InvalidParameterMessage(key)});");
-                }
+                AppendInvalidValue(builder, param, hasFilter);
                 builder.EndScope();
                 builder.EndScope();
                 builder.NewLine();
@@ -661,15 +642,7 @@ internal static class FunctionSourceBuilder
                     : $"!{StringConverterType}.{converterMethod}({AsSpanMethod}({pRaw}), out var {pVar}tmp)";
                 builder.AppendLine($"if ({converterCall})");
                 builder.BeginScope();
-                if (hasFilter)
-                {
-                    builder.AppendLine($"ctx.Result = new {BadRequestResultType}({InvalidParameterMessage(key)});");
-                    builder.AppendLine("return;");
-                }
-                else
-                {
-                    builder.AppendLine($"return new {BadRequestResultType}({InvalidParameterMessage(key)});");
-                }
+                AppendInvalidValue(builder, param, hasFilter);
                 builder.EndScope();
                 builder.AppendLine($"{pVar} = {pVar}tmp;");
             }
@@ -695,15 +668,7 @@ internal static class FunctionSourceBuilder
                     : $"!{StringConverterType}.{converterMethod}({AsSpanMethod}({pRaw}), out {pVar})";
                 builder.AppendLine($"if ({converterCall})");
                 builder.BeginScope();
-                if (hasFilter)
-                {
-                    builder.AppendLine($"ctx.Result = new {BadRequestResultType}({InvalidParameterMessage(key)});");
-                    builder.AppendLine("return;");
-                }
-                else
-                {
-                    builder.AppendLine($"return new {BadRequestResultType}({InvalidParameterMessage(key)});");
-                }
+                AppendInvalidValue(builder, param, hasFilter);
                 builder.EndScope();
             }
 
@@ -748,15 +713,7 @@ internal static class FunctionSourceBuilder
                     : $"!{StringConverterType}.{converterMethod}({AsSpanMethod}({pRaw}), out var {pVar}tmp)";
                 builder.AppendLine($"if ({converterCall})");
                 builder.BeginScope();
-                if (hasFilter)
-                {
-                    builder.AppendLine($"ctx.Result = new {BadRequestResultType}({InvalidParameterMessage(key)});");
-                    builder.AppendLine("return;");
-                }
-                else
-                {
-                    builder.AppendLine($"return new {BadRequestResultType}({InvalidParameterMessage(key)});");
-                }
+                AppendInvalidValue(builder, param, hasFilter);
                 builder.EndScope();
                 builder.AppendLine($"{pVar} = {pVar}tmp;");
             }
@@ -786,15 +743,66 @@ internal static class FunctionSourceBuilder
                     : $"!{StringConverterType}.{converterMethod}({AsSpanMethod}({pRaw}), out {pVar})";
                 builder.AppendLine($"if ({converterCall})");
                 builder.BeginScope();
-                if (hasFilter)
-                {
-                    builder.AppendLine($"ctx.Result = new {BadRequestResultType}({InvalidParameterMessage(key)});");
-                    builder.AppendLine("return;");
-                }
-                else
-                {
-                    builder.AppendLine($"return new {BadRequestResultType}({InvalidParameterMessage(key)});");
-                }
+                AppendInvalidValue(builder, param, hasFilter);
+                builder.EndScope();
+            }
+
+            builder.EndScope();
+            builder.NewLine();
+        }
+    }
+
+    // Cookie を req.Cookies (ASP.NET Core の規則) から1つの値として取り出し、ヘッダーと同じく型変換するコードを出力する。
+    // Emits code to extract a single value from req.Cookies (ASP.NET Core rules) and convert it the same way as headers.
+    private static void BuildCookieBinding(SourceBuilder builder, ParameterModel param, int index, bool hasFilter)
+    {
+        var pVar = $"p{index}";
+        var pRaw = $"p{index}raw";
+        var typeName = param.Type.FullName;
+        var key = param.Key;
+        var converterMethod = param.ConverterMethod;
+        var defaultLiteral = param.HasDefault ? (param.DefaultValueLiteral ?? "default") : null;
+
+        if (param.Type.IsNullable && (param.Type.UnderlyingType is not null))
+        {
+            var baseType = param.Type.UnderlyingType.FullName;
+            var init = defaultLiteral is not null ? $"({typeName}){defaultLiteral}" : $"({typeName})null";
+            builder.AppendLine($"var {pVar} = {init};");
+            builder.AppendLine($"if (req.Cookies.TryGetValue({CSharpLiteral.Format(key)}, out var {pRaw}))");
+            builder.BeginScope();
+            var isEnum = converterMethod == "TryToEnum";
+            var converterCall = isEnum
+                ? $"!{StringConverterType}.TryToEnum<{baseType}>({AsSpanMethod}({pRaw}), out var {pVar}tmp)"
+                : $"!{StringConverterType}.{converterMethod}({AsSpanMethod}({pRaw}), out var {pVar}tmp)";
+            builder.AppendLine($"if ({converterCall})");
+            builder.BeginScope();
+            AppendInvalidValue(builder, param, hasFilter);
+            builder.EndScope();
+            builder.AppendLine($"{pVar} = {pVar}tmp;");
+            builder.EndScope();
+            builder.NewLine();
+        }
+        else
+        {
+            var init = String.IsNullOrEmpty(converterMethod)
+                ? (defaultLiteral is not null ? $"({typeName}){defaultLiteral}!" : $"default({typeName})!")
+                : (defaultLiteral is not null ? $"({typeName}){defaultLiteral}" : $"default({typeName})");
+            builder.AppendLine($"var {pVar} = {init};");
+            builder.AppendLine($"if (req.Cookies.TryGetValue({CSharpLiteral.Format(key)}, out var {pRaw}))");
+            builder.BeginScope();
+            if (String.IsNullOrEmpty(converterMethod))
+            {
+                builder.AppendLine($"{pVar} = {pRaw};");
+            }
+            else
+            {
+                var isEnum = converterMethod == "TryToEnum";
+                var converterCall = isEnum
+                    ? $"!{StringConverterType}.TryToEnum<{typeName}>({AsSpanMethod}({pRaw}), out {pVar})"
+                    : $"!{StringConverterType}.{converterMethod}({AsSpanMethod}({pRaw}), out {pVar})";
+                builder.AppendLine($"if ({converterCall})");
+                builder.BeginScope();
+                AppendInvalidValue(builder, param, hasFilter);
                 builder.EndScope();
             }
 
@@ -807,7 +815,6 @@ internal static class FunctionSourceBuilder
     {
         var pVar = $"p{index}";
         var elemType = elementType.FullName;
-        var key = param.Key;
         var converterMethod = param.ConverterMethod;
         builder.AppendLine($"var {pVar}parts = {valueExpr}.Split(',');");
         builder.AppendLine($"{pVar} = new {elemType}[{pVar}parts.Length];");
@@ -826,15 +833,7 @@ internal static class FunctionSourceBuilder
                 : $"!{StringConverterType}.{converterMethod}({AsSpanMethod}({pVar}parts[i]), out var {pVar}elem)";
             builder.AppendLine($"if ({converterCall})");
             builder.BeginScope();
-            if (hasFilter)
-            {
-                builder.AppendLine($"ctx.Result = new {BadRequestResultType}({InvalidParameterMessage(key)});");
-                builder.AppendLine("return;");
-            }
-            else
-            {
-                builder.AppendLine($"return new {BadRequestResultType}({InvalidParameterMessage(key)});");
-            }
+            AppendInvalidValue(builder, param, hasFilter);
             builder.EndScope();
             builder.AppendLine($"{pVar}[i] = {pVar}elem;");
         }
@@ -846,15 +845,7 @@ internal static class FunctionSourceBuilder
                 : $"!{StringConverterType}.{converterMethod}({AsSpanMethod}({pVar}parts[i]), out {pVar}[i])";
             builder.AppendLine($"if ({converterCall})");
             builder.BeginScope();
-            if (hasFilter)
-            {
-                builder.AppendLine($"ctx.Result = new {BadRequestResultType}({InvalidParameterMessage(key)});");
-                builder.AppendLine("return;");
-            }
-            else
-            {
-                builder.AppendLine($"return new {BadRequestResultType}({InvalidParameterMessage(key)});");
-            }
+            AppendInvalidValue(builder, param, hasFilter);
             builder.EndScope();
         }
 
@@ -939,10 +930,13 @@ internal static class FunctionSourceBuilder
                     argParts.Add(hasFilter ? "ctx.FunctionContext" : "context");
                     break;
                 case ParameterBindingType.CancellationToken:
-                    argParts.Add(hasFilter ? "ctx.CancellationToken" : "context.CancellationToken");
+                    argParts.Add(hasFilter ? "ctx.CancellationToken" : InvocationCancellationToken);
                     break;
                 case ParameterBindingType.Logger:
                     argParts.Add($"{GetRequiredService}<{p.Type.FullName}>(services)");
+                    break;
+                case ParameterBindingType.User:
+                    argParts.Add(hasFilter ? "ctx.User" : "req.HttpContext.User");
                     break;
                 case ParameterBindingType.FromTrigger:
                     argParts.Add(handler.Type == HandlerType.Timer ? "timerInfo" : "message");
@@ -956,14 +950,61 @@ internal static class FunctionSourceBuilder
         return String.Join(", ", argParts);
     }
 
-    private static void BuildInvocationSetup(SourceBuilder builder, FunctionModel model)
+    private static void BuildInvocationSetup(SourceBuilder builder, FunctionModel model, HandlerModel handler)
     {
         builder.AppendLine("var services = context.InstanceServices;");
         builder.AppendLine($"var target = {ActivatorUtilitiesType}.CreateInstance<{model.FunctionType.FullName}>(services);");
+        if (UsesCancellation(model, handler))
+        {
+            builder.AppendLine($"using var __cts__ = {GetService}<{CancellationOptionsType}>(services)?.CreateTokenSource(context.CancellationToken);");
+        }
     }
+
+    // フィルターがあるか、関数が CancellationToken を受け取るときだけ、上限で取り消すトークンの設定を取り出す
+    // Resolve the settings of the token canceled at the timeout only when there are filters or the function takes a CancellationToken
+    private static bool UsesCancellation(FunctionModel model, HandlerModel handler) =>
+        (model.Filters.Count > 0) || HasCancellationTokenParameter(handler);
+
+    private static bool HasCancellationTokenParameter(HandlerModel handler) =>
+        handler.Parameters.Any(static p => p.BindingType == ParameterBindingType.CancellationToken);
 
     private static string InvalidParameterMessage(string key) =>
         CSharpLiteral.Format("Invalid parameter: " + key);
+
+    // 読み取りと検証の失敗で応答を返す。フィルターの中は ctx.Result に入れて戻り、フィルターなしは直接返す
+    // Returns the response for a binding or validation failure; inside filters sets ctx.Result and returns, without filters returns directly
+    private static void AppendBindingFailure(SourceBuilder builder, bool hasFilter, string error, string message)
+    {
+        if (hasFilter)
+        {
+            builder.AppendLine($"ctx.Result = __BindingErrorResult__(services, {error}, {message});");
+            builder.AppendLine("return;");
+        }
+        else
+        {
+            builder.AppendLine($"return __BindingErrorResult__(services, {error}, {message});");
+        }
+    }
+
+    private static void AppendInvalidValue(SourceBuilder builder, ParameterModel param, bool hasFilter) =>
+        AppendBindingFailure(builder, hasFilter, NewBindingError("InvalidValue", GetBindingSource(param), param.Key), InvalidParameterMessage(param.Key));
+
+    // 失敗の内容を応答の部品に渡す BindingError の生成式。Name は本文なら引数の名前、ほかはバインドのキー
+    // Expression that creates the BindingError passed to the factory. Name is the parameter name for the body, otherwise the binding key
+    private static string NewBindingError(string kind, string source, string name, string? validationResults = null)
+    {
+        var results = validationResults is not null ? $", {validationResults}" : string.Empty;
+        return $"new {BindingErrorType}({BindingErrorKindType}.{kind}, {BindingSourceType}.{source}, {CSharpLiteral.Format(name)}{results})";
+    }
+
+    private static string GetBindingSource(ParameterModel param) =>
+        param.BindingType switch
+        {
+            ParameterBindingType.FromRoute => "Route",
+            ParameterBindingType.FromHeader => "Header",
+            ParameterBindingType.FromCookie => "Cookie",
+            _ => "Query"
+        };
 
     private static string ToPascalCase(string name)
     {

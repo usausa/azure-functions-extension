@@ -1,0 +1,84 @@
+namespace AzureFunctionsExtension.Tests;
+
+using System.Text;
+
+using Microsoft.AspNetCore.Http;
+using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.Routing;
+using Microsoft.Azure.Functions.Worker;
+using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Primitives;
+
+internal static class HandlerTestHost
+{
+    public static IServiceProvider CreateServices(Action<IServiceCollection>? configure = null)
+    {
+        var services = new ServiceCollection();
+        services.AddLogging();
+        services.AddAzureFunctionExtension();
+        configure?.Invoke(services);
+        return services.BuildServiceProvider();
+    }
+
+    public static FunctionContext CreateContext(IServiceProvider services, CancellationToken cancellationToken) =>
+        new FakeFunctionContext(services, cancellationToken);
+
+    public static HttpRequest CreateRequest(
+        IServiceProvider services,
+        IDictionary<string, StringValues>? query = null,
+        IDictionary<string, object?>? route = null,
+        IDictionary<string, StringValues>? headers = null,
+        string? body = null)
+    {
+        var httpContext = new DefaultHttpContext { RequestServices = services };
+        var request = httpContext.Request;
+
+        if (query is not null)
+        {
+            request.Query = new QueryCollection(new Dictionary<string, StringValues>(query));
+        }
+
+        if (route is not null)
+        {
+            var routeValues = new RouteValueDictionary();
+            foreach (var entry in route)
+            {
+                routeValues[entry.Key] = entry.Value;
+            }
+
+            request.RouteValues = routeValues;
+        }
+
+        if (headers is not null)
+        {
+            foreach (var header in headers)
+            {
+                request.Headers[header.Key] = header.Value;
+            }
+        }
+
+        if (body is not null)
+        {
+            request.Body = new SyncReadDisallowedStream(Encoding.UTF8.GetBytes(body));
+        }
+
+        return request;
+    }
+
+    public static int? StatusOf(IActionResult result) => result switch
+    {
+        global::AzureFunctionsExtension.Mvc.SystemTextJsonResult r => r.StatusCode,
+        ObjectResult r => r.StatusCode,
+        StatusCodeResult r => r.StatusCode,
+        _ => null
+    };
+
+    public static T? ValueOf<T>(IActionResult result)
+        where T : class
+        => result switch
+        {
+            global::AzureFunctionsExtension.Mvc.SystemTextJsonResult r => r.Value as T,
+            ObjectResult r => r.Value as T,
+            _ => null
+        };
+}

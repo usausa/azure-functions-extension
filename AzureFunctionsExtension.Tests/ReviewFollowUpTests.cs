@@ -100,13 +100,13 @@ public sealed class ReviewFollowUpTests
 #pragma warning restore CA1812
 
     [Fact]
-    public void DefaultDeserializesCaseInsensitively()
+    public async Task DefaultDeserializesCaseInsensitively()
     {
 #pragma warning disable IDE0028
         using var body = new MemoryStream("""{"NAME":"abc"}"""u8.ToArray());
 #pragma warning restore IDE0028
 
-        var value = JsonBodySerializer.Default.Deserialize<NamedValue>(body);
+        var value = await JsonBodySerializer.Default.DeserializeAsync<NamedValue>(body, CancellationToken.None);
 
         Assert.Equal("abc", value?.Name);
     }

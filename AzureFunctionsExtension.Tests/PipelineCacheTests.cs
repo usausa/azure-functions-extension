@@ -29,6 +29,36 @@ public sealed class PipelineCacheTests
         internal sealed class Unrelated;
         """;
 
+    private const string FilterSource =
+        """
+        namespace TestFunctions;
+
+        using System.Threading.Tasks;
+        using AzureFunctionsExtension.Annotations;
+        using AzureFunctionsExtension.Filters;
+        using Microsoft.AspNetCore.Mvc;
+
+        public sealed class SampleFilter : IFunctionFilter
+        {
+            public ValueTask InvokeAsync(FunctionInvocationContext context, FunctionFilterDelegate next) => next(context);
+        }
+
+        [AzureFunction]
+        public sealed partial class SampleFunction
+        {
+            [HttpEndpoint("get", "sample")]
+            public IActionResult Run()
+            {
+                return new EmptyResult();
+            }
+        }
+        """;
+
+    private const string AssemblyFilterSource =
+        """
+        [assembly: AzureFunctionsExtension.Annotations.Filter<TestFunctions.SampleFilter>]
+        """;
+
     private const string AddedTargetSource =
         """
         namespace TestFunctions;
@@ -71,5 +101,17 @@ public sealed class PipelineCacheTests
 
         // Assert
         Assert.Contains(result.OutputReasons, static x => x.IsChanged());
+    }
+
+    [Fact]
+    public void AssemblyFilterInOtherFileRebuildsModel()
+    {
+        // Arrange & Act
+        var result = CompilationHelper.RunIncremental(FilterSource, AssemblyFilterSource);
+
+        // Assert
+        Assert.Contains(result.OutputReasons, static x => x.IsChanged());
+        Assert.DoesNotContain("SampleFilter", result.FirstGeneratedText, StringComparison.Ordinal);
+        Assert.Contains("SampleFilter", result.SecondGeneratedText, StringComparison.Ordinal);
     }
 }
