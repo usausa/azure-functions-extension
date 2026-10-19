@@ -14,7 +14,7 @@ standard .NET / Azure Functions container; dependencies are resolved from
 
 ## Supported triggers
 
-Initial release supports the following triggers:
+The following triggers are supported:
 
 * `[HttpEndpoint]` &mdash; HTTP trigger (ASP.NET Core integration)
 * `[TimerEndpoint]` &mdash; Timer trigger
@@ -645,7 +645,11 @@ configured on `AddAzureFunctionExtension`, which is based on `JsonSerializerDefa
 
 * **Request body** (`[FromBody]`) is deserialized with the registered `IBodySerializer`
   (`DeserializeAsync(Stream, CancellationToken)`). The default serializer is built from the configured `JsonOptions`.
-* **Response** (`Results.Ok(value)` etc.) is serialized with the same `JsonOptions`.
+* **Response** (`Results.Ok(value)` etc.) is serialized with the same `JsonOptions`, by the runtime type of the value.
+* An `IBodySerializer` registered before `AddAzureFunctionExtension` replaces the default one for request bodies only;
+  responses are always written with `JsonOptions`.
+* Difference from AmazonLambdaExtension: there is no `JsonOptions` there, and the registered `IBodySerializer` reads the
+  request bodies and writes the response bodies.
 
 ### Configuration
 
@@ -659,23 +663,22 @@ services.AddAzureFunctionExtension(c =>
 
 ### Native AOT / trimming
 
-The library is annotated for trimming and AOT. To serialize without reflection, register an
-`IBodySerializer` backed by a `JsonSerializerContext`. Register it **before**
-`AddAzureFunctionExtension` (the default serializer is only added when one is not already present).
+The library is annotated for trimming and AOT. To serialize without reflection, add a `JsonSerializerContext`
+to `JsonOptions`. Both the default `IBodySerializer` (request bodies) and the responses use it.
 
 ```csharp
 using System.Text.Json.Serialization;
 
-using AzureFunctionsExtension.Serialization;
-
-[JsonSourceGenerationOptions(
-    PropertyNamingPolicy = JsonKnownNamingPolicy.CamelCase,
-    DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull)]
 [JsonSerializable(typeof(BodyRequest))]
 internal sealed partial class AppJsonContext : JsonSerializerContext;
 ```
 
 ```csharp
-services.AddSingleton<IBodySerializer>(new JsonBodySerializer(AppJsonContext.Default));
-services.AddAzureFunctionExtension();
+builder.Services.AddAzureFunctionExtension(c => c.Options.TypeInfoResolverChain.Insert(0, AppJsonContext.Default));
 ```
+
+* Add the types of all request and response bodies to the context. Anonymous types (`Results.Ok(new { ... })`)
+  cannot be written without reflection.
+* The settings of `JsonOptions` (`JsonSerializerDefaults.Web`) apply, not the `[JsonSourceGenerationOptions]` of the context.
+* Registering only an `IBodySerializer` backed by the context is not enough, because the responses are written with `JsonOptions`.
+* Native AOT publishing of the isolated worker itself has not been verified.
