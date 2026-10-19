@@ -15,10 +15,6 @@ builder.UseMiddleware<ClientPrincipalMiddleware>();
 builder.Services.AddAzureFunctionExtension();
 builder.Services.AddSingleton<IBindingErrorResultFactory, BindingErrorResultFactory>();
 builder.Services.AddSingleton<IGreetingService, GreetingService>();
-builder.Services.AddTransient<HttpFunction>();
-builder.Services.AddTransient<QueueFunction>();
-builder.Services.AddTransient<FilterFunction>();
-builder.Services.AddTransient<UserFunction>();
 builder.Services.AddTransient<LoggingFilter>();
 builder.Services.AddTransient<RequestIdFilter>();
 

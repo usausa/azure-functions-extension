@@ -124,7 +124,7 @@ public sealed class AssemblyFilterTests
     {
         var diagnostics = CompilationHelper.RunGenerator("[assembly: AzureFunctionsExtension.Annotations.Filter<Test.NotAFilter>]" + Environment.NewLine + InvalidFilterSource).Diagnostics;
 
-        var diagnostic = Assert.Single(diagnostics, static x => x.Id == "AFE0101");
+        var diagnostic = Assert.Single(diagnostics, static x => x.Id == "AFE0201");
         Assert.True(diagnostic.Location.IsInSource);
         Assert.Equal(0, diagnostic.Location.GetLineSpan().StartLinePosition.Line);
     }
@@ -144,7 +144,7 @@ public sealed class AssemblyFilterTests
 
         var diagnostics = driver.RunGenerators(compilation, TestContext.Current.CancellationToken).GetRunResult().Diagnostics;
 
-        var diagnostic = Assert.Single(diagnostics, static x => x.Id == "AFE0101");
+        var diagnostic = Assert.Single(diagnostics, static x => x.Id == "AFE0201");
         Assert.Equal("AssemblyInfo.cs", diagnostic.Location.GetLineSpan().Path);
         Assert.Equal(0, diagnostic.Location.GetLineSpan().StartLinePosition.Line);
     }

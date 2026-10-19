@@ -608,7 +608,7 @@ internal static class FunctionModelBuilder
             diagnostics.Add(new DiagnosticInfo(
                 Diagnostics.UnsupportedBindingType,
                 param.Locations.FirstOrDefault(),
-                paramType.ToDisplayString(SymbolDisplayFormat.MinimallyQualifiedFormat)));
+                paramType.ToDisplayString()));
             return null;
         }
 

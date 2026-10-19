@@ -175,7 +175,7 @@ public class DiagnosticTests
     // ------------------------------------------------------------
 
     [Fact]
-    public void Afe0101FilterTypeDoesNotImplementIFunctionFilterEmitsDiagnostic()
+    public void Afe0201FilterTypeDoesNotImplementIFunctionFilterEmitsDiagnostic()
     {
         const string source =
             """
@@ -199,7 +199,7 @@ public class DiagnosticTests
 
         var result = RunGenerator(source);
 
-        Assert.Contains(result.Diagnostics, static d => d.Id == "AFE0101");
+        Assert.Contains(result.Diagnostics, static d => d.Id == "AFE0201");
     }
 
     // ------------------------------------------------------------
@@ -207,7 +207,7 @@ public class DiagnosticTests
     // ------------------------------------------------------------
 
     [Fact]
-    public void Afe0201UndefinedAuthorizationLevelEmitsDiagnostic()
+    public void Afe0310UndefinedAuthorizationLevelEmitsDiagnostic()
     {
         const string source =
             """
@@ -227,11 +227,11 @@ public class DiagnosticTests
 
         var result = RunGenerator(source);
 
-        Assert.Contains(result.Diagnostics, static d => d.Id == "AFE0201");
+        Assert.Contains(result.Diagnostics, static d => d.Id == "AFE0310");
     }
 
     [Fact]
-    public void Afe0202HandlerHasMultipleEndpointAttributesEmitsDiagnostic()
+    public void Afe0301HandlerHasMultipleEndpointAttributesEmitsDiagnostic()
     {
         const string source =
             """
@@ -251,11 +251,11 @@ public class DiagnosticTests
 
         var result = RunGenerator(source);
 
-        Assert.Contains(result.Diagnostics, static d => d.Id == "AFE0202");
+        Assert.Contains(result.Diagnostics, static d => d.Id == "AFE0301");
     }
 
     [Fact]
-    public void Afe0203HandlerIsGenericEmitsDiagnostic()
+    public void Afe0302HandlerIsGenericEmitsDiagnostic()
     {
         const string source =
             """
@@ -275,11 +275,11 @@ public class DiagnosticTests
 
         var problems = GetProblemIds(source);
 
-        Assert.Equal(["AFE0203"], problems);
+        Assert.Equal(["AFE0302"], problems);
     }
 
     [Fact]
-    public void Afe0204QueueHandlerHasMultipleTriggerPayloadsEmitsDiagnostic()
+    public void Afe0304QueueHandlerHasMultipleTriggerPayloadsEmitsDiagnostic()
     {
         const string source =
             """
@@ -299,11 +299,11 @@ public class DiagnosticTests
 
         var result = RunGenerator(source);
 
-        Assert.Contains(result.Diagnostics, static d => d.Id == "AFE0204");
+        Assert.Contains(result.Diagnostics, static d => d.Id == "AFE0304");
     }
 
     [Fact]
-    public void Afe0204MultipleTriggerPayloadsForSingleTriggerHandlerEmitsNoDiagnostic()
+    public void Afe0304MultipleTriggerPayloadsForSingleTriggerHandlerEmitsNoDiagnostic()
     {
         const string source =
             """
@@ -323,11 +323,11 @@ public class DiagnosticTests
 
         var result = RunGenerator(source);
 
-        Assert.DoesNotContain(result.Diagnostics, static d => d.Id == "AFE0204");
+        Assert.DoesNotContain(result.Diagnostics, static d => d.Id == "AFE0304");
     }
 
     [Fact]
-    public void Afe0205HandlerIsOverloadedEmitsDiagnostic()
+    public void Afe0306HandlerIsOverloadedEmitsDiagnostic()
     {
         const string source =
             """
@@ -349,11 +349,11 @@ public class DiagnosticTests
 
         var result = RunGenerator(source);
 
-        Assert.Contains(result.Diagnostics, static d => d.Id == "AFE0205");
+        Assert.Contains(result.Diagnostics, static d => d.Id == "AFE0306");
     }
 
     [Fact]
-    public void Afe0205HandlerNameDiffersOnlyInCaseEmitsDiagnostic()
+    public void Afe0306HandlerNameDiffersOnlyInCaseEmitsDiagnostic()
     {
         const string source =
             """
@@ -375,11 +375,11 @@ public class DiagnosticTests
 
         var problems = GetProblemIds(source);
 
-        Assert.Equal(["AFE0205"], problems);
+        Assert.Equal(["AFE0306"], problems);
     }
 
     [Fact]
-    public void Afe0205HandlerNameDuplicatedAcrossClassesEmitsDiagnostic()
+    public void Afe0306HandlerNameDuplicatedAcrossClassesEmitsDiagnostic()
     {
         const string source =
             """
@@ -405,11 +405,11 @@ public class DiagnosticTests
 
         var problems = GetProblemIds(source);
 
-        Assert.Equal(["AFE0205", "AFE0205"], problems);
+        Assert.Equal(["AFE0306", "AFE0306"], problems);
     }
 
     [Fact]
-    public void Afe0205HandlerNameDuplicatedWithWorkerFunctionEmitsDiagnostic()
+    public void Afe0306HandlerNameDuplicatedWithWorkerFunctionEmitsDiagnostic()
     {
         const string source =
             """
@@ -436,11 +436,11 @@ public class DiagnosticTests
 
         var problems = GetProblemIds(source);
 
-        Assert.Equal(["AFE0205"], problems);
+        Assert.Equal(["AFE0306"], problems);
     }
 
     [Fact]
-    public void Afe0205HandlerNameNotDuplicatedWithWorkerFunctionEmitsNoDiagnostic()
+    public void Afe0306HandlerNameNotDuplicatedWithWorkerFunctionEmitsNoDiagnostic()
     {
         const string source =
             """
@@ -471,7 +471,7 @@ public class DiagnosticTests
     }
 
     [Fact]
-    public void Afe0206BaseClassHandlerIsReportedOnce()
+    public void Afe0309BaseClassHandlerIsReportedOnce()
     {
         const string source =
             """
@@ -503,7 +503,7 @@ public class DiagnosticTests
 
         var result = RunGenerator(source);
 
-        var diagnostic = Assert.Single(result.Diagnostics, static d => d.Id == "AFE0206");
+        var diagnostic = Assert.Single(result.Diagnostics, static d => d.Id == "AFE0309");
         Assert.Equal(DiagnosticSeverity.Warning, diagnostic.Severity);
     }
 
@@ -512,7 +512,7 @@ public class DiagnosticTests
     // ------------------------------------------------------------
 
     [Fact]
-    public void Afe0301HttpOnlyBindingUsedOnNonHttpHandlerEmitsDiagnostic()
+    public void Afe0403HttpOnlyBindingUsedOnNonHttpHandlerEmitsDiagnostic()
     {
         const string source =
             """
@@ -532,11 +532,11 @@ public class DiagnosticTests
 
         var result = RunGenerator(source);
 
-        Assert.Contains(result.Diagnostics, static d => d.Id == "AFE0301");
+        Assert.Contains(result.Diagnostics, static d => d.Id == "AFE0403");
     }
 
     [Fact]
-    public void Afe0301CookieBindingUsedOnNonHttpHandlerEmitsDiagnostic()
+    public void Afe0403CookieBindingUsedOnNonHttpHandlerEmitsDiagnostic()
     {
         const string source =
             """
@@ -556,13 +556,13 @@ public class DiagnosticTests
 
         var result = RunGenerator(source);
 
-        Assert.Contains(result.Diagnostics, static d => d.Id == "AFE0301");
+        Assert.Contains(result.Diagnostics, static d => d.Id == "AFE0403");
     }
 
     [Theory]
     [InlineData("[TimerEndpoint(\"0 */5 * * * *\")]")]
     [InlineData("[QueueEndpoint(\"my-queue\")]")]
-    public void Afe0301ClaimsPrincipalUsedOnNonHttpHandlerEmitsDiagnostic(string attribute)
+    public void Afe0403ClaimsPrincipalUsedOnNonHttpHandlerEmitsDiagnostic(string attribute)
     {
         var source = $$"""
             namespace TestFunctions;
@@ -582,14 +582,14 @@ public class DiagnosticTests
 
         var result = RunGenerator(source);
 
-        Assert.Contains(result.Diagnostics, static d => d.Id == "AFE0301");
-        Assert.DoesNotContain(result.Diagnostics, static d => d.Id == "AFE0304");
+        Assert.Contains(result.Diagnostics, static d => d.Id == "AFE0403");
+        Assert.DoesNotContain(result.Diagnostics, static d => d.Id == "AFE0408");
     }
 
     [Theory]
     [InlineData("[TimerEndpoint(\"0 */5 * * * *\")]")]
     [InlineData("[QueueEndpoint(\"my-queue\")]")]
-    public void Afe0301HttpRequestUsedOnNonHttpHandlerEmitsDiagnostic(string attribute)
+    public void Afe0403HttpRequestUsedOnNonHttpHandlerEmitsDiagnostic(string attribute)
     {
         var source = $$"""
             namespace TestFunctions;
@@ -609,11 +609,11 @@ public class DiagnosticTests
 
         var problems = GetProblemIds(source);
 
-        Assert.Equal(["AFE0301"], problems);
+        Assert.Equal(["AFE0403"], problems);
     }
 
     [Fact]
-    public void Afe0301ClaimsPrincipalOnHttpHandlerEmitsNoDiagnostic()
+    public void Afe0403ClaimsPrincipalOnHttpHandlerEmitsNoDiagnostic()
     {
         const string source =
             """
@@ -637,7 +637,7 @@ public class DiagnosticTests
     }
 
     [Fact]
-    public void Afe0302MultipleBindingAttributesAreAppliedEmitsDiagnostic()
+    public void Afe0401MultipleBindingAttributesAreAppliedEmitsDiagnostic()
     {
         const string source =
             """
@@ -659,11 +659,11 @@ public class DiagnosticTests
 
         var result = RunGenerator(source);
 
-        Assert.Contains(result.Diagnostics, static d => d.Id == "AFE0302");
+        Assert.Contains(result.Diagnostics, static d => d.Id == "AFE0401");
     }
 
     [Fact]
-    public void Afe0303TextBindingTypeIsUnsupportedEmitsDiagnostic()
+    public void Afe0406TextBindingTypeIsUnsupportedEmitsDiagnostic()
     {
         const string source =
             """
@@ -690,11 +690,11 @@ public class DiagnosticTests
 
         var result = RunGenerator(source);
 
-        Assert.Contains(result.Diagnostics, static d => d.Id == "AFE0303");
+        Assert.Contains(result.Diagnostics, static d => d.Id == "AFE0406");
     }
 
     [Fact]
-    public void Afe0303NullableHttpRequestEmitsNoDiagnostic()
+    public void Afe0406NullableHttpRequestEmitsNoDiagnostic()
     {
         const string source =
             """
@@ -724,7 +724,7 @@ public class DiagnosticTests
     [InlineData("sample", "[AzureFunctionsExtension.Annotations.FromHeader(\"x-ids\")] int[,] ids")]
     [InlineData("items/{ids}", "[AzureFunctionsExtension.Annotations.FromRoute] int[][] ids")]
     [InlineData("items/{ids}", "[AzureFunctionsExtension.Annotations.FromRoute] int[,] ids")]
-    public void Afe0303JaggedOrMultidimensionalArrayEmitsDiagnostic(string route, string parameter)
+    public void Afe0406JaggedOrMultidimensionalArrayEmitsDiagnostic(string route, string parameter)
     {
         var source = $$"""
             namespace TestFunctions;
@@ -742,13 +742,13 @@ public class DiagnosticTests
 
         var problems = GetProblemIds(source);
 
-        Assert.Equal(["AFE0303"], problems);
+        Assert.Equal(["AFE0406"], problems);
     }
 
     [Theory]
     [InlineData("string[] values")]
     [InlineData("int[] values")]
-    public void Afe0303CookieArrayEmitsDiagnostic(string parameter)
+    public void Afe0406CookieArrayEmitsDiagnostic(string parameter)
     {
         var source = $$"""
             namespace TestFunctions;
@@ -766,13 +766,13 @@ public class DiagnosticTests
 
         var problems = GetProblemIds(source);
 
-        Assert.Equal(["AFE0303"], problems);
+        Assert.Equal(["AFE0406"], problems);
     }
 
     [Theory]
     [InlineData("[TimerEndpoint(\"0 */5 * * * *\")]", "string payload")]
     [InlineData("[QueueEndpoint(\"queue\")]", "Payload payload")]
-    public void Afe0304UnsupportedTriggerPayloadEmitsDiagnostic(string attribute, string parameter)
+    public void Afe0408UnsupportedTriggerPayloadEmitsDiagnostic(string attribute, string parameter)
     {
         var source = $$"""
             namespace TestFunctions;
@@ -796,11 +796,11 @@ public class DiagnosticTests
 
         var result = RunGenerator(source);
 
-        Assert.Contains(result.Diagnostics, static d => d.Id == "AFE0304");
+        Assert.Contains(result.Diagnostics, static d => d.Id == "AFE0408");
     }
 
     [Fact]
-    public void Afe0305MvcBindingAttributeEmitsWarning()
+    public void Afe0409MvcBindingAttributeEmitsWarning()
     {
         const string source =
             """
@@ -819,11 +819,11 @@ public class DiagnosticTests
 
         var result = RunGenerator(source);
 
-        Assert.Contains(result.Diagnostics, static d => d.Id == "AFE0305");
+        Assert.Contains(result.Diagnostics, static d => d.Id == "AFE0409");
     }
 
     [Fact]
-    public void Afe0305ForeignCookieAttributeEmitsWarning()
+    public void Afe0409ForeignCookieAttributeEmitsWarning()
     {
         const string source =
             """
@@ -857,7 +857,7 @@ public class DiagnosticTests
 
         var result = RunGenerator(source);
 
-        Assert.Contains(result.Diagnostics, static d => d.Id == "AFE0305");
+        Assert.Contains(result.Diagnostics, static d => d.Id == "AFE0409");
     }
 
     // ------------------------------------------------------------
@@ -865,7 +865,7 @@ public class DiagnosticTests
     // ------------------------------------------------------------
 
     [Fact]
-    public void Afe0401RouteParameterIsNotBoundEmitsDiagnostic()
+    public void Afe0410RouteParameterIsNotBoundEmitsDiagnostic()
     {
         const string source =
             """
@@ -887,11 +887,11 @@ public class DiagnosticTests
 
         var result = RunGenerator(source);
 
-        Assert.Contains(result.Diagnostics, static d => d.Id == "AFE0401");
+        Assert.Contains(result.Diagnostics, static d => d.Id == "AFE0410");
     }
 
     [Fact]
-    public void Afe0401MissingRouteParameterWhenRouteVariableIsBoundEmitsNoDiagnostic()
+    public void Afe0410MissingRouteParameterWhenRouteVariableIsBoundEmitsNoDiagnostic()
     {
         const string source =
             """
@@ -914,11 +914,11 @@ public class DiagnosticTests
         var result = RunGenerator(source);
 
         AssertNoGeneratorErrors(result);
-        Assert.DoesNotContain(result.Diagnostics, static d => d.Id == "AFE0401");
+        Assert.DoesNotContain(result.Diagnostics, static d => d.Id == "AFE0410");
     }
 
     [Fact]
-    public void Afe0401DoesNotStopGeneratingFunctions()
+    public void Afe0410DoesNotStopGeneratingFunctions()
     {
         const string source =
             """
@@ -941,13 +941,13 @@ public class DiagnosticTests
 
         var result = RunGenerator(source);
 
-        Assert.Equal(["AFE0401"], GetProblemIds(source));
+        Assert.Equal(["AFE0410"], GetProblemIds(source));
         Assert.Contains("Function(\"Ping\")", result.GeneratedCode, StringComparison.Ordinal);
         Assert.Contains("Function(\"File\")", result.GeneratedCode, StringComparison.Ordinal);
     }
 
     [Fact]
-    public void Afe0401CanBeSuppressedAtFunction()
+    public void Afe0410CanBeSuppressedAtFunction()
     {
         const string source =
             """
@@ -960,10 +960,10 @@ public class DiagnosticTests
             [AzureFunction]
             public sealed partial class SampleFunction
             {
-            #pragma warning disable AFE0401
+            #pragma warning disable AFE0410
                 [HttpEndpoint("get", "files/{*path}")]
                 public IActionResult File(HttpRequest request) => new EmptyResult();
-            #pragma warning restore AFE0401
+            #pragma warning restore AFE0410
             }
             """;
 

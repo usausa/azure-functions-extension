@@ -78,8 +78,8 @@ Pin the SDK version in `global.json`:
 
 ### Program.cs
 
-Configure the Isolated worker host and register the extension. Function classes and their
-dependencies are registered with the standard DI container.
+Configure the Isolated worker host and register the extension. Register the services that the
+functions use with the standard DI container. Function classes need no registration (see [Dependency injection](#dependency-injection)).
 
 ```csharp
 using AzureFunctionsExtension;
@@ -94,15 +94,12 @@ builder.Services.AddAzureFunctionExtension();
 // Application services
 builder.Services.AddSingleton<IGreetingService, GreetingService>();
 
-// Function classes
-builder.Services.AddTransient<SampleFunction>();
-
 builder.Build().Run();
 ```
 
 * The generator emits a catalog of the functions. `AddAzureFunctionExtension()` adds them to the function metadata
   that the worker reports to the Functions host (worker indexing) and runs them, so they need no other registration.
-  Functions written by hand with `[Function]` can be in the same app, with names that differ from the generated ones (`AFE0205`).
+  Functions written by hand with `[Function]` can be in the same app, with names that differ from the generated ones (`AFE0306`).
 * `AddAzureFunctionExtension()` registers the executor that runs the generated functions. It must be registered after
   the one of the Worker SDK, so call it after `ConfigureFunctionsWebApplication()`. `HostBuilder`
   (`ConfigureFunctionsWebApplication()` and then `ConfigureServices(...)`) works in the same order.
@@ -189,7 +186,7 @@ public sealed partial class SampleFunction
 
 Parameters of the following types need no attribute: `HttpRequest`, `FunctionContext`, `CancellationToken`
 (see [Cancellation](#cancellation)), `ILogger<T>`, and `ClaimsPrincipal` (see [Claims and cookies](#claims-and-cookies)).
-`HttpRequest` and `ClaimsPrincipal` can be used only in HTTP functions (`AFE0301`).
+`HttpRequest` and `ClaimsPrincipal` can be used only in HTTP functions (`AFE0403`).
 
 ## HTTP binding
 
@@ -376,13 +373,13 @@ builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme).AddJw
 * Filters read and replace the caller with `FunctionInvocationContext.User`. In an HTTP function it reads and writes
   `HttpContext.User`, so the function receives the replaced one. In Timer and Queue functions it is kept in the context
   (empty and unauthenticated at first).
-* `ClaimsPrincipal` parameters can be used only in HTTP functions (`AFE0301`).
+* `ClaimsPrincipal` parameters can be used only in HTTP functions (`AFE0403`).
 * `[FromCookie("name")]` reads `HttpRequest.Cookies`, so the rules are those of ASP.NET Core: names are case-insensitive,
   values are URL-decoded (`+` is kept), the last one wins for the same name, an empty value is ignored (an earlier value stays),
   an entry with a character that is not allowed (whitespace, `"`, `,`, `;`, `\`, or non-ASCII) or with a space before `=`
   is ignored, and a quoted value keeps its quotes.
 * `[FromCookie]` converts the value like `[FromQuery]`; a missing value binds the default value (or `null`), and arrays
-  are not supported (`AFE0303`). It can be used only in HTTP functions (`AFE0301`).
+  are not supported (`AFE0406`). It can be used only in HTTP functions (`AFE0403`).
 * Difference from AmazonLambdaExtension: the user there is created from the claims of the HTTP API JWT authorizer,
   which API Gateway passes as strings. So an array element containing a space is split there (`["a b","c"]` arrives as
   `[a b c]`), an object claim is a `map[...]` string, and the `ValueType` of every claim is `string`. With JwtBearer here,
@@ -469,9 +466,14 @@ DI uses the standard Azure Functions / .NET container &mdash; there is no custom
 
 * Inject services into the function class through its constructor.
 * Inject services into a handler parameter with `[FromServices]`.
+* The function class needs no registration. As the default function activator of the Functions worker does, the generated
+  code creates the class for each invocation with `ActivatorUtilities.CreateInstance`, and a registration of the class is not used.
 
 Dependencies are resolved from `FunctionContext.InstanceServices`.
 `[FromServices("key")]` resolves a keyed service (`GetRequiredKeyedService`); without a key it resolves the default service (`GetRequiredService`).
+
+Difference from AmazonLambdaExtension: the class there is created once for the execution environment, so its constructor
+dependencies are effectively singletons. Here they come from the scope of each invocation.
 
 ```csharp
 [HttpEndpoint("post", "greet", AuthorizationLevel.Anonymous)]
@@ -556,7 +558,7 @@ internal sealed class RequestIdFilter : IFunctionFilter
 }
 ```
 
-* A filter type that does not implement `IFunctionFilter` on the assembly is reported once at the attribute (`AFE0101`).
+* A filter type that does not implement `IFunctionFilter` on the assembly is reported once at the attribute (`AFE0201`).
 
 ### Cancellation
 

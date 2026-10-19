@@ -6,7 +6,7 @@ using SourceGenerateHelper;
 
 internal static class Diagnostics
 {
-    // Class definition (00xx)
+    // Class structure (00xx)
 
     public static DiagnosticDescriptor NotPartialClass { get; } = new(
         id: "AFE0001",
@@ -53,10 +53,10 @@ internal static class Diagnostics
         isEnabledByDefault: true,
         customTags: DiagnosticTags.NotSuppressible);
 
-    // Filter (01xx)
+    // Filter (02xx)
 
     public static DiagnosticDescriptor FilterNotImplementIFunctionFilter { get; } = new(
-        id: "AFE0101",
+        id: "AFE0201",
         title: "Invalid filter type",
         messageFormat: "Filter type does not implement IFunctionFilter. type=[{0}]",
         category: "Usage",
@@ -64,19 +64,10 @@ internal static class Diagnostics
         isEnabledByDefault: true,
         customTags: DiagnosticTags.NotSuppressible);
 
-    // Function (02xx)
-
-    public static DiagnosticDescriptor UndefinedEnumValue { get; } = new(
-        id: "AFE0201",
-        title: "Undefined enum value",
-        messageFormat: "Attribute argument is not a defined enum value. function=[{0}], value=[{1}]",
-        category: "Usage",
-        defaultSeverity: DiagnosticSeverity.Error,
-        isEnabledByDefault: true,
-        customTags: DiagnosticTags.NotSuppressible);
+    // Function (03xx)
 
     public static DiagnosticDescriptor MultipleHandlerAttributes { get; } = new(
-        id: "AFE0202",
+        id: "AFE0301",
         title: "Multiple endpoint attributes",
         messageFormat: "Function has multiple endpoint attributes. function=[{0}]",
         category: "Usage",
@@ -85,7 +76,7 @@ internal static class Diagnostics
         customTags: DiagnosticTags.NotSuppressible);
 
     public static DiagnosticDescriptor GenericHandler { get; } = new(
-        id: "AFE0203",
+        id: "AFE0302",
         title: "Function must not be generic",
         messageFormat: "Function must not be generic. function=[{0}]",
         category: "Usage",
@@ -94,7 +85,7 @@ internal static class Diagnostics
         customTags: DiagnosticTags.NotSuppressible);
 
     public static DiagnosticDescriptor MultipleTriggerPayloads { get; } = new(
-        id: "AFE0204",
+        id: "AFE0304",
         title: "Multiple trigger payloads",
         messageFormat: "[TimerEndpoint]/[QueueEndpoint] function has multiple payload parameters. function=[{0}]",
         category: "Usage",
@@ -103,7 +94,7 @@ internal static class Diagnostics
         customTags: DiagnosticTags.NotSuppressible);
 
     public static DiagnosticDescriptor OverloadedHandler { get; } = new(
-        id: "AFE0205",
+        id: "AFE0306",
         title: "Function is overloaded",
         messageFormat: "Function name is not unique. function=[{0}]",
         category: "Usage",
@@ -112,26 +103,26 @@ internal static class Diagnostics
         customTags: DiagnosticTags.NotSuppressible);
 
     public static DiagnosticDescriptor BaseClassHandler { get; } = new(
-        id: "AFE0206",
+        id: "AFE0309",
         title: "Handler declared in a base class",
         messageFormat: "Handler declared in a base class does not become a function. function=[{0}]",
         category: "Usage",
         defaultSeverity: DiagnosticSeverity.Warning,
         isEnabledByDefault: true);
 
-    // Parameter (03xx)
-
-    public static DiagnosticDescriptor InvalidBindingOnNonHttpHandler { get; } = new(
-        id: "AFE0301",
-        title: "Invalid binding on non-HTTP function",
-        messageFormat: "HTTP-only binding on a non-HTTP function. function=[{0}]",
+    public static DiagnosticDescriptor UndefinedEnumValue { get; } = new(
+        id: "AFE0310",
+        title: "Undefined enum value",
+        messageFormat: "Attribute argument is not a defined enum value. function=[{0}], value=[{1}]",
         category: "Usage",
         defaultSeverity: DiagnosticSeverity.Error,
         isEnabledByDefault: true,
         customTags: DiagnosticTags.NotSuppressible);
 
+    // Parameter (04xx)
+
     public static DiagnosticDescriptor MultipleBindingAttributes { get; } = new(
-        id: "AFE0302",
+        id: "AFE0401",
         title: "Multiple binding attributes",
         messageFormat: "Parameter has multiple binding attributes. function=[{0}], parameter=[{1}]",
         category: "Usage",
@@ -139,8 +130,17 @@ internal static class Diagnostics
         isEnabledByDefault: true,
         customTags: DiagnosticTags.NotSuppressible);
 
+    public static DiagnosticDescriptor InvalidBindingOnNonHttpHandler { get; } = new(
+        id: "AFE0403",
+        title: "Invalid binding on non-HTTP function",
+        messageFormat: "HTTP-only binding on a non-HTTP function. function=[{0}]",
+        category: "Usage",
+        defaultSeverity: DiagnosticSeverity.Error,
+        isEnabledByDefault: true,
+        customTags: DiagnosticTags.NotSuppressible);
+
     public static DiagnosticDescriptor UnsupportedBindingType { get; } = new(
-        id: "AFE0303",
+        id: "AFE0406",
         title: "Unsupported binding type",
         messageFormat: "Binding type is not supported. type=[{0}]",
         category: "Usage",
@@ -149,7 +149,7 @@ internal static class Diagnostics
         customTags: DiagnosticTags.NotSuppressible);
 
     public static DiagnosticDescriptor UnsupportedTriggerPayload { get; } = new(
-        id: "AFE0304",
+        id: "AFE0408",
         title: "Unsupported trigger payload",
         messageFormat: "Trigger payload must be TimerInfo for [TimerEndpoint] and string for [QueueEndpoint]. function=[{0}], parameter=[{1}]",
         category: "Usage",
@@ -158,17 +158,15 @@ internal static class Diagnostics
         customTags: DiagnosticTags.NotSuppressible);
 
     public static DiagnosticDescriptor ForeignBindingAttribute { get; } = new(
-        id: "AFE0305",
+        id: "AFE0409",
         title: "Binding attribute of another library",
         messageFormat: "Attribute has the name of a binding attribute but is not AzureFunctionsExtension's, and is ignored. function=[{0}], parameter=[{1}], attribute=[{2}]",
         category: "Usage",
         defaultSeverity: DiagnosticSeverity.Warning,
         isEnabledByDefault: true);
 
-    // Route (04xx)
-
     public static DiagnosticDescriptor MissingRouteParameter { get; } = new(
-        id: "AFE0401",
+        id: "AFE0410",
         title: "Missing route parameter",
         messageFormat: "Route variable is not bound with [FromRoute]. variable=[{0}], function=[{1}]",
         category: "Usage",
