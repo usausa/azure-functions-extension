@@ -43,9 +43,7 @@ public sealed class SerializerAndConverterTests
         await using var provider = services.BuildServiceProvider();
         var serializer = provider.GetRequiredService<IBodySerializer>();
 
-#pragma warning disable IDE0028
         using var stream = new MemoryStream("""{"user_name":"abc"}"""u8.ToArray());
-#pragma warning restore IDE0028
         var result = await serializer.DeserializeAsync<SnakeCasePayload>(stream, CancellationToken.None);
 
         Assert.NotNull(result);
@@ -77,9 +75,7 @@ public sealed class SerializerAndConverterTests
         await using var provider = services.BuildServiceProvider();
         var serializer = provider.GetRequiredService<IBodySerializer>();
 
-#pragma warning disable IDE0028
         using var stream = new MemoryStream("""{"VALUE":1}"""u8.ToArray());
-#pragma warning restore IDE0028
         var result = await serializer.DeserializeAsync<ValuePayload>(stream, CancellationToken.None);
 
         Assert.Equal(new ValuePayload { Value = 1 }, result);

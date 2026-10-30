@@ -102,9 +102,7 @@ public sealed class ReviewFollowUpTests
     [Fact]
     public async Task DefaultDeserializesCaseInsensitively()
     {
-#pragma warning disable IDE0028
         using var body = new MemoryStream("""{"NAME":"abc"}"""u8.ToArray());
-#pragma warning restore IDE0028
 
         var value = await JsonBodySerializer.Default.DeserializeAsync<NamedValue>(body, CancellationToken.None);
 
