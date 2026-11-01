@@ -689,4 +689,7 @@ builder.Services.Configure<Microsoft.AspNetCore.Mvc.JsonOptions>(o => o.JsonSeri
   cannot be written without reflection.
 * The settings of the MVC `JsonOptions` apply, not the `[JsonSourceGenerationOptions]` of the context.
 * Registering only an `IBodySerializer` backed by the context is not enough, because the responses are written with the MVC `JsonOptions`.
-* Native AOT publishing of the isolated worker itself has not been verified.
+* Native AOT does not work with the isolated worker as of Microsoft.Azure.Functions.Worker 2.52.0. The publish
+  succeeds, but the worker fails at startup: `WorkerInformation` reads `Assembly.Location`, which is empty in a native
+  executable, and the worker writes its startup diagnostics with reflection-based JSON, which trimmed and Native AOT
+  apps disable by default (`JsonSerializerIsReflectionEnabledByDefault`).

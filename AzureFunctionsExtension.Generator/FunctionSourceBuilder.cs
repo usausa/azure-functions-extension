@@ -23,9 +23,7 @@ internal static class FunctionSourceBuilder
     private const string InvocationContextType = "global::AzureFunctionsExtension.Filters.FunctionInvocationContext";
     private const string FilterDelegateType = "global::AzureFunctionsExtension.Filters.FunctionFilterDelegate";
     private const string BodySerializerType = "global::AzureFunctionsExtension.Serialization.IBodySerializer";
-    private const string DefaultBodySerializerType = "global::AzureFunctionsExtension.Serialization.JsonBodySerializer";
     private const string RequestValidatorType = "global::AzureFunctionsExtension.Validation.IRequestValidator";
-    private const string DefaultRequestValidatorType = "global::AzureFunctionsExtension.Validation.DataAnnotationsRequestValidator";
     private const string ApiExceptionType = "global::AzureFunctionsExtension.ApiException";
     private const string CancellationOptionsType = "global::AzureFunctionsExtension.FunctionCancellationOptions";
     private const string InvalidOperationExceptionType = "global::System.InvalidOperationException";
@@ -466,7 +464,7 @@ internal static class FunctionSourceBuilder
                 builder.NewLine();
                 return;
             case ParameterBindingType.FromBody:
-                builder.AppendLine($"var bodySerializer{index} = {GetService}<{BodySerializerType}>(services) ?? {DefaultBodySerializerType}.Default;");
+                builder.AppendLine($"var bodySerializer{index} = {GetRequiredService}<{BodySerializerType}>(services);");
                 builder.AppendLine($"var {pVar} = default({typeName})!;");
                 builder.AppendLine("try");
                 builder.BeginScope();
@@ -486,7 +484,7 @@ internal static class FunctionSourceBuilder
 
                 if (!param.SkipValidation)
                 {
-                    builder.AppendLine($"var requestValidator{index} = {GetService}<{RequestValidatorType}>(services) ?? new {DefaultRequestValidatorType}();");
+                    builder.AppendLine($"var requestValidator{index} = {GetRequiredService}<{RequestValidatorType}>(services);");
                     builder.AppendLine($"if ({pVar} is not null && !requestValidator{index}.Validate({pVar}))");
                     builder.BeginScope();
                     // 失敗時のみ詳細を収集し直す（成功パスにアロケーションを増やさない）
