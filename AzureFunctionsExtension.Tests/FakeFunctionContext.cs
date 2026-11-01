@@ -8,7 +8,6 @@ using Microsoft.Azure.Functions.Worker.Context.Features;
 
 internal sealed class FakeFunctionContext : FunctionContext
 {
-    private readonly FunctionDefinition? functionDefinition;
     private readonly FakeInvocationFeatures? features;
 
     public FakeFunctionContext(IServiceProvider instanceServices, CancellationToken cancellationToken = default)
@@ -20,7 +19,7 @@ internal sealed class FakeFunctionContext : FunctionContext
     public FakeFunctionContext(IServiceProvider instanceServices, string entryPoint, params object?[] inputs)
         : this(instanceServices)
     {
-        functionDefinition = new FakeFunctionDefinition(entryPoint);
+        FunctionDefinition = new FakeFunctionDefinition(entryPoint);
         features = new FakeInvocationFeatures();
         features.Set<IFunctionInputBindingFeature>(new FakeInputBindingFeature(inputs));
     }
@@ -37,7 +36,7 @@ internal sealed class FakeFunctionContext : FunctionContext
 
     public override IServiceProvider InstanceServices { get; set; }
 
-    public override FunctionDefinition FunctionDefinition => functionDefinition ?? throw new NotSupportedException();
+    public override FunctionDefinition FunctionDefinition => field ?? throw new NotSupportedException();
 
     public override IDictionary<object, object> Items { get; set; } = new Dictionary<object, object>();
 

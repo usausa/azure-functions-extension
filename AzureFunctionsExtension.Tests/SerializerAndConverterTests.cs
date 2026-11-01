@@ -83,8 +83,7 @@ public sealed class SerializerAndConverterTests
 
         await using var provider = services.BuildServiceProvider();
         using var body = new MemoryStream();
-        var httpContext = new DefaultHttpContext { RequestServices = provider };
-        httpContext.Response.Body = body;
+        var httpContext = new DefaultHttpContext { RequestServices = provider, Response = { Body = body } };
 
         var result = global::AzureFunctionsExtension.Results.Ok(new SnakeCasePayload { UserName = "abc" });
         await result.ExecuteResultAsync(new ActionContext(httpContext, new RouteData(), new ActionDescriptor()));

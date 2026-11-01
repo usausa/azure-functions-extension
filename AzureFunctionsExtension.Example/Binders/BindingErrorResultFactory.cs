@@ -11,11 +11,14 @@ internal sealed class BindingErrorResultFactory : IBindingErrorResultFactory
     {
         var problem = new ValidationProblemDetails
         {
-            Status = StatusCodes.Status400BadRequest
+            Status = StatusCodes.Status400BadRequest,
+            Errors =
+            {
+                [bindingError.Name] = bindingError.ValidationResults.Count > 0
+                    ? [.. bindingError.ValidationResults.Select(static x => x.ErrorMessage ?? string.Empty)]
+                    : [bindingError.Kind.ToString()]
+            }
         };
-        problem.Errors[bindingError.Name] = bindingError.ValidationResults.Count > 0
-            ? [.. bindingError.ValidationResults.Select(static x => x.ErrorMessage ?? string.Empty)]
-            : [bindingError.Kind.ToString()];
 
         return new ObjectResult(problem)
         {
