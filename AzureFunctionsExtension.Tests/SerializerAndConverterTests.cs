@@ -9,6 +9,10 @@ using AzureFunctionsExtension;
 using AzureFunctionsExtension.Binders;
 using AzureFunctionsExtension.Serialization;
 
+using Microsoft.AspNetCore.Http;
+using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.Mvc.Abstractions;
+using Microsoft.AspNetCore.Routing;
 using Microsoft.Extensions.DependencyInjection;
 
 public sealed class SerializerAndConverterTests
@@ -38,7 +42,8 @@ public sealed class SerializerAndConverterTests
     public async Task ConfiguredNamingPolicyIsAppliedToDeserialization()
     {
         var services = new ServiceCollection();
-        services.AddAzureFunctionExtension(static o => o.Options.PropertyNamingPolicy = JsonNamingPolicy.SnakeCaseLower);
+        services.Configure<JsonOptions>(static o => o.JsonSerializerOptions.PropertyNamingPolicy = JsonNamingPolicy.SnakeCaseLower);
+        services.AddAzureFunctionExtension();
 
         await using var provider = services.BuildServiceProvider();
         var serializer = provider.GetRequiredService<IBodySerializer>();
@@ -54,7 +59,8 @@ public sealed class SerializerAndConverterTests
     public async Task ConfiguredNamingPolicyIsAppliedToSerialization()
     {
         var services = new ServiceCollection();
-        services.AddAzureFunctionExtension(static o => o.Options.PropertyNamingPolicy = JsonNamingPolicy.SnakeCaseLower);
+        services.Configure<JsonOptions>(static o => o.JsonSerializerOptions.PropertyNamingPolicy = JsonNamingPolicy.SnakeCaseLower);
+        services.AddAzureFunctionExtension();
 
         await using var provider = services.BuildServiceProvider();
         var serializer = provider.GetRequiredService<IBodySerializer>();
@@ -64,6 +70,26 @@ public sealed class SerializerAndConverterTests
 
         var json = Encoding.UTF8.GetString(stream.ToArray());
         Assert.Contains("user_name", json, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public async Task ConfiguredNamingPolicyIsAppliedToOkResponse()
+    {
+        var services = new ServiceCollection();
+        services.AddLogging();
+        services.AddMvc();
+        services.Configure<JsonOptions>(static o => o.JsonSerializerOptions.PropertyNamingPolicy = JsonNamingPolicy.SnakeCaseLower);
+        services.AddAzureFunctionExtension();
+
+        await using var provider = services.BuildServiceProvider();
+        using var body = new MemoryStream();
+        var httpContext = new DefaultHttpContext { RequestServices = provider };
+        httpContext.Response.Body = body;
+
+        var result = global::AzureFunctionsExtension.Results.Ok(new SnakeCasePayload { UserName = "abc" });
+        await result.ExecuteResultAsync(new ActionContext(httpContext, new RouteData(), new ActionDescriptor()));
+
+        Assert.Equal("""{"user_name":"abc"}""", Encoding.UTF8.GetString(body.ToArray()));
     }
 
     [Fact]

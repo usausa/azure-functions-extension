@@ -7,6 +7,7 @@ using AzureFunctionsExtension.Hosting;
 using AzureFunctionsExtension.Serialization;
 using AzureFunctionsExtension.Validation;
 
+using Microsoft.AspNetCore.Mvc;
 using Microsoft.Azure.Functions.Worker.Core.FunctionMetadata;
 using Microsoft.Azure.Functions.Worker.Invocation;
 using Microsoft.Extensions.DependencyInjection;
@@ -19,15 +20,8 @@ public static class ServiceCollectionExtensions
     [UnconditionalSuppressMessage("AOT", "IL3050", Justification = "Default serializer registration keeps the existing API shape.")]
     public static IServiceCollection AddAzureFunctionExtension(this IServiceCollection services)
     {
-        return services.AddAzureFunctionExtension(static _ => { });
-    }
-
-    [UnconditionalSuppressMessage("Trimming", "IL2026", Justification = "Default serializer registration keeps the existing API shape.")]
-    [UnconditionalSuppressMessage("AOT", "IL3050", Justification = "Default serializer registration keeps the existing API shape.")]
-    public static IServiceCollection AddAzureFunctionExtension(this IServiceCollection services, Action<JsonOptions> action)
-    {
-        services.Configure(action);
-        services.TryAddSingleton<IBodySerializer>(static sp => new JsonBodySerializer(sp.GetRequiredService<IOptions<JsonOptions>>().Value.Options));
+        services.AddOptions();
+        services.TryAddSingleton<IBodySerializer>(static sp => new JsonBodySerializer(sp.GetRequiredService<IOptions<JsonOptions>>().Value.JsonSerializerOptions));
         services.TryAddSingleton<IRequestValidator, DataAnnotationsRequestValidator>();
         AddFunctionCatalog(services);
         return services;

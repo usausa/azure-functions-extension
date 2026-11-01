@@ -854,11 +854,10 @@ internal static class FunctionSourceBuilder
 
     // __target__ の実メソッドを呼び出すコードを出力する。
     // HTTP の戻り値は IActionResult ならそのまま、void / Task は Results.Ok()、それ以外は Results.Ok(value) でラップする。
-    // Results.Ok を経由することでライブラリ独自の JsonOptions が適用される。
     // 結果はフィルターモードなら ctx.Result に、直接モードなら return に使う。
     // Emits code to invoke the actual method on __target__.
     // For HTTP, an IActionResult is returned as-is; void/Task is wrapped as Results.Ok() and any other
-    // return value as Results.Ok(value), so the library's JsonOptions is honored.
+    // return value as Results.Ok(value).
     // The result is assigned to ctx.Result in filter mode, otherwise returned.
     private static void BuildHandlerInvocation(SourceBuilder builder, HandlerModel handler, bool hasFilter)
     {

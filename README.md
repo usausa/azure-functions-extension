@@ -438,7 +438,8 @@ builder.Services.AddSingleton<IBindingErrorResultFactory, BindingErrorResultFact
 A handler may return:
 
 * an `IActionResult` &mdash; returned as-is
-* any other object &mdash; serialized as JSON with a `200 OK`
+* any other object &mdash; returned as `Results.Ok(value)`, which writes it as JSON with a `200 OK`
+  (see [JSON serialization](#json-serialization) for `string` and `null`)
 * `void` / `Task` &mdash; returns `200 OK` with no body
 
 The `Results` helper creates common results:
@@ -639,32 +640,36 @@ public sealed partial class QueueFunction
 
 ## JSON serialization
 
-`System.Text.Json` is used throughout. Both input and output share the same `JsonOptions`
-configured on `AddAzureFunctionExtension`, which is based on `JsonSerializerDefaults.Web`
-(camelCase property names on write and case-insensitive property matching on read).
+`System.Text.Json` is used throughout, with the MVC `JsonOptions` (`Microsoft.AspNetCore.Mvc.JsonOptions`). Its default
+is based on `JsonSerializerDefaults.Web` (camelCase property names on write and case-insensitive property matching on
+read), with a maximum depth of 32.
 
 * **Request body** (`[FromBody]`) is deserialized with the registered `IBodySerializer`
-  (`DeserializeAsync(Stream, CancellationToken)`). The default serializer is built from the configured `JsonOptions`.
-* **Response** (`Results.Ok(value)` etc.) is serialized with the same `JsonOptions`, by the runtime type of the value.
-* An `IBodySerializer` registered before `AddAzureFunctionExtension` replaces the default one for request bodies only;
-  responses are always written with `JsonOptions`.
-* Difference from AmazonLambdaExtension: there is no `JsonOptions` there, and the registered `IBodySerializer` reads the
-  request bodies and writes the response bodies.
+  (`DeserializeAsync(Stream, CancellationToken)`). The default serializer is built from the MVC `JsonOptions`.
+* **Response**: `Results.Ok(value)`, a handler that returns any other object, and the other results with a body
+  (`Results.Created`, `BadRequest`, `NotFound`, `Conflict`, `StatusCode(statusCode, value)`, and an `ObjectResult` that
+  the app creates, such as the one of an `IBindingErrorResultFactory`) are ASP.NET Core MVC results. They are written
+  with the MVC `JsonOptions` by the runtime type of the value, as `application/json; charset=utf-8`.
+* As in ASP.NET Core MVC, a `string` value is written as `text/plain` (as a JSON string when the `Accept` header asks
+  for `application/json`), and `Results.Ok(null)` or a handler that returns `null` responds with 204 and no body.
+* An `IBodySerializer` registered before `AddAzureFunctionExtension` replaces the default one for request bodies only.
+* Difference from AmazonLambdaExtension: the registered `IBodySerializer` there reads the request bodies and writes all
+  the response bodies.
 
 ### Configuration
 
 ```csharp
-services.AddAzureFunctionExtension(c =>
+services.Configure<Microsoft.AspNetCore.Mvc.JsonOptions>(o =>
 {
-    c.Options.PropertyNameCaseInsensitive = true;
-    c.Options.Converters.Add(new System.Text.Json.Serialization.JsonStringEnumConverter());
+    o.JsonSerializerOptions.PropertyNameCaseInsensitive = true;
+    o.JsonSerializerOptions.Converters.Add(new System.Text.Json.Serialization.JsonStringEnumConverter());
 });
 ```
 
 ### Native AOT / trimming
 
-The library is annotated for trimming and AOT. To serialize without reflection, add a `JsonSerializerContext`
-to `JsonOptions`. Both the default `IBodySerializer` (request bodies) and the responses use it.
+The library is annotated for trimming and AOT. To serialize without reflection, add a `JsonSerializerContext` to the
+MVC `JsonOptions`. It is used for the request bodies and all the responses.
 
 ```csharp
 using System.Text.Json.Serialization;
@@ -674,11 +679,11 @@ internal sealed partial class AppJsonContext : JsonSerializerContext;
 ```
 
 ```csharp
-builder.Services.AddAzureFunctionExtension(c => c.Options.TypeInfoResolverChain.Insert(0, AppJsonContext.Default));
+builder.Services.Configure<Microsoft.AspNetCore.Mvc.JsonOptions>(o => o.JsonSerializerOptions.TypeInfoResolverChain.Insert(0, AppJsonContext.Default));
 ```
 
 * Add the types of all request and response bodies to the context. Anonymous types (`Results.Ok(new { ... })`)
   cannot be written without reflection.
-* The settings of `JsonOptions` (`JsonSerializerDefaults.Web`) apply, not the `[JsonSourceGenerationOptions]` of the context.
-* Registering only an `IBodySerializer` backed by the context is not enough, because the responses are written with `JsonOptions`.
+* The settings of the MVC `JsonOptions` apply, not the `[JsonSourceGenerationOptions]` of the context.
+* Registering only an `IBodySerializer` backed by the context is not enough, because the responses are written with the MVC `JsonOptions`.
 * Native AOT publishing of the isolated worker itself has not been verified.

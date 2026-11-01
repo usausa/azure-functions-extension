@@ -67,7 +67,6 @@ internal static class HandlerTestHost
 
     public static int? StatusOf(IActionResult result) => result switch
     {
-        global::AzureFunctionsExtension.Mvc.SystemTextJsonResult r => r.StatusCode,
         ObjectResult r => r.StatusCode,
         StatusCodeResult r => r.StatusCode,
         _ => null
@@ -77,7 +76,6 @@ internal static class HandlerTestHost
         where T : class
         => result switch
         {
-            global::AzureFunctionsExtension.Mvc.SystemTextJsonResult r => r.Value as T,
             ObjectResult r => r.Value as T,
             _ => null
         };
