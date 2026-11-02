@@ -5,6 +5,7 @@
     <OutputType>Exe</OutputType>
     <IsPackable>false</IsPackable>
     <CodeAnalysisRuleSet>..\Analyzers.ruleset</CodeAnalysisRuleSet>
+    <NoWarn>$(NoWarn);ASP0029</NoWarn>
   </PropertyGroup>
 
   <PropertyGroup>

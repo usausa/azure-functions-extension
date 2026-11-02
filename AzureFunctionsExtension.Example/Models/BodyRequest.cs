@@ -2,7 +2,10 @@ namespace AzureFunctionsExtension.Example.Models;
 
 using System.ComponentModel.DataAnnotations;
 
-internal sealed class BodyRequest
+using Microsoft.Extensions.Validation;
+
+[ValidatableType]
+public sealed class BodyRequest
 {
     [Required]
     public int Id { get; set; }

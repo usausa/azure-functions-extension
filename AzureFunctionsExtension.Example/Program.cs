@@ -1,5 +1,6 @@
 using AzureFunctionsExtension;
 using AzureFunctionsExtension.Binders;
+using AzureFunctionsExtension.Example;
 using AzureFunctionsExtension.Example.Binders;
 using AzureFunctionsExtension.Example.Functions;
 using AzureFunctionsExtension.Example.Middleware;
@@ -13,6 +14,7 @@ builder.ConfigureFunctionsWebApplication();
 builder.UseMiddleware<ClientPrincipalMiddleware>();
 
 builder.Services.AddAzureFunctionExtension();
+builder.Services.AddRequestValidation();
 builder.Services.AddSingleton<IBindingErrorResultFactory, BindingErrorResultFactory>();
 builder.Services.AddSingleton<IGreetingService, GreetingService>();
 builder.Services.AddTransient<LoggingFilter>();

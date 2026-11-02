@@ -23,6 +23,7 @@ internal static class HandlerTestHost
         var services = new ServiceCollection();
         services.AddLogging();
         services.AddAzureFunctionExtension();
+        services.AddRequestValidation();
         services.AddSingleton<IGreetingService, GreetingService>();
         services.AddTransient<HttpFunction>();
         services.AddTransient<QueueFunction>();

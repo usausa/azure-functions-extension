@@ -270,7 +270,7 @@ A header whose value itself contains commas (such as an HTTP date) cannot be bou
 ### Body
 
 The JSON body is deserialized with `System.Text.Json`. A missing or invalid body returns
-`400 Bad Request`. DataAnnotations validation runs by default; set
+`400 Bad Request`. DataAnnotations validation runs by default (see [Validation](#validation)); set
 `[FromBody(SkipValidate = true)]` to skip it.
 
 ```csharp
@@ -295,6 +295,65 @@ public IActionResult Body([FromBody] BodyRequest request)
 The body is read asynchronously from the request stream (`IBodySerializer.DeserializeAsync`), because the ASP.NET Core
 integration does not allow synchronous reads. Difference from AmazonLambdaExtension: the body of an HTTP API request
 is a string in the Lambda event, so the serializer there reads strings.
+
+### Validation
+
+A `[FromBody]` parameter is validated by the registered `IRequestValidator` unless `SkipValidate = true`. The rules are
+the DataAnnotations attributes (`[Required]`, `[Range]`, `[StringLength]`, ...) and `IValidatableObject`.
+`AddAzureFunctionExtension()` registers `DataAnnotationsRequestValidator` when no validator is registered.
+
+| Implementation | Use |
+| --- | --- |
+| `ValidatableTypeRequestValidator` | Uses the validation information that the generator of `Microsoft.Extensions.Validation` (the validation of .NET 10) creates at build time. Nested objects and the elements of collection properties are validated as well. |
+| `DataAnnotationsRequestValidator` | Uses `Validator.TryValidateObject`. The default. |
+
+```csharp
+using System.ComponentModel.DataAnnotations;
+
+using Microsoft.Extensions.Validation;
+
+[ValidatableType]
+public sealed class BodyRequest
+{
+    [Required]
+    public string Name { get; set; } = string.Empty;
+}
+```
+
+```csharp
+builder.Services.AddAzureFunctionExtension();
+builder.Services.AddValidation();
+builder.Services.AddSingleton<IRequestValidator, ValidatableTypeRequestValidator>();
+```
+
+```xml
+<PropertyGroup>
+  <NoWarn>$(NoWarn);ASP0029</NoWarn>
+</PropertyGroup>
+```
+
+* `Microsoft.Extensions.Validation` and its generator are part of the ASP.NET Core shared framework, which the HTTP
+  extension of the worker references. The generator intercepts the call of `AddValidation()` and adds the types marked
+  with `[ValidatableType]` in the same project, together with the types of their properties. Call `AddValidation()` in
+  the project that declares the body types. A test project that builds the services by itself calls it through a
+  method of that project (`AddRequestValidation()` of the Example).
+* The registration replaces the default one, before or after `AddAzureFunctionExtension()`.
+* `[ValidatableType]` is experimental in .NET 10 and reports `ASP0029` as an error. Suppress it in the project, as above.
+* Mark each body type with `[ValidatableType]` and make it `public`. Validating a type that the generator did not add
+  (not marked, not `public`, declared in another project, or without any rule) throws `InvalidOperationException`
+  (`Validatable type is not found. type=[...]`), so a missing mark is found at the first request. Set
+  `SkipValidate = true` for a body without rules, a `string` body, and a collection body.
+* The results differ from `DataAnnotationsRequestValidator` in the following points. The other results (the messages,
+  the order, `[Display(Name)]`, `IValidatableObject`, and the properties of the base types) are the same.
+  * Nested objects and the elements of collection properties are validated. The member name of a result is the path
+    (`Child.Value`, `Items[1].Value`).
+  * The attributes on the parameters of the primary constructor of a record are used. `DataAnnotationsRequestValidator`
+    uses only the attributes on the properties (`[property: Required]`).
+  * Properties with `[JsonIgnore]` are not validated.
+  * For an attribute on the type that does not return its own `ValidationResult`, the default message uses the display
+    name of the last validated property, and the result has its member name.
+* Difference from AmazonLambdaExtension: the package there references `Microsoft.Extensions.Validation`, and the
+  validator is registered in `ConfigureServices()` of the `ServiceResolver`.
 
 ### Claims and cookies
 
@@ -671,25 +730,5 @@ services.Configure<Microsoft.AspNetCore.Mvc.JsonOptions>(o =>
 
 ### Native AOT / trimming
 
-The library is annotated for trimming and AOT. To serialize without reflection, add a `JsonSerializerContext` to the
-MVC `JsonOptions`. It is used for the request bodies and all the responses.
-
-```csharp
-using System.Text.Json.Serialization;
-
-[JsonSerializable(typeof(BodyRequest))]
-internal sealed partial class AppJsonContext : JsonSerializerContext;
-```
-
-```csharp
-builder.Services.Configure<Microsoft.AspNetCore.Mvc.JsonOptions>(o => o.JsonSerializerOptions.TypeInfoResolverChain.Insert(0, AppJsonContext.Default));
-```
-
-* Add the types of all request and response bodies to the context. Anonymous types (`Results.Ok(new { ... })`)
-  cannot be written without reflection.
-* The settings of the MVC `JsonOptions` apply, not the `[JsonSourceGenerationOptions]` of the context.
-* Registering only an `IBodySerializer` backed by the context is not enough, because the responses are written with the MVC `JsonOptions`.
-* Native AOT does not work with the isolated worker as of Microsoft.Azure.Functions.Worker 2.52.0. The publish
-  succeeds, but the worker fails at startup: `WorkerInformation` reads `Assembly.Location`, which is empty in a native
-  executable, and the worker writes its startup diagnostics with reflection-based JSON, which trimmed and Native AOT
-  apps disable by default (`JsonSerializerIsReflectionEnabledByDefault`).
+Not supported. The isolated worker of Azure Functions (`Microsoft.Azure.Functions.Worker`) does not support Native AOT
+and trimming, so this library does not support them either.
