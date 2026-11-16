@@ -304,7 +304,7 @@ the DataAnnotations attributes (`[Required]`, `[Range]`, `[StringLength]`, ...) 
 
 | Implementation | Use |
 | --- | --- |
-| `ValidatableTypeRequestValidator` | Uses the validation information that the generator of `Microsoft.Extensions.Validation` (the validation of .NET 10) creates at build time. Nested objects and the elements of collection properties are validated as well. |
+| `ValidatableTypeRequestValidator` | Uses the validation information that the generator of `Microsoft.Extensions.Validation` (the validation of .NET 10 and 11) creates at build time. Nested objects and the elements of collection properties are validated as well. |
 | `DataAnnotationsRequestValidator` | Uses `Validator.TryValidateObject`. The default. |
 
 ```csharp
@@ -338,7 +338,8 @@ builder.Services.AddSingleton<IRequestValidator, ValidatableTypeRequestValidator
   the project that declares the body types. A test project that builds the services by itself calls it through a
   method of that project (`AddRequestValidation()` of the Example).
 * The registration replaces the default one, before or after `AddAzureFunctionExtension()`.
-* `[ValidatableType]` is experimental in .NET 10 and reports `ASP0029` as an error. Suppress it in the project, as above.
+* With .NET 10, `[ValidatableType]` is experimental and reports `ASP0029` as an error. Suppress it in the project, as
+  above. With .NET 11, it is not experimental.
 * Mark each body type with `[ValidatableType]` and make it `public`. Validating a type that the generator did not add
   (not marked, not `public`, declared in another project, or without any rule) throws `InvalidOperationException`
   (`Validatable type is not found. type=[...]`), so a missing mark is found at the first request. Set
@@ -350,8 +351,9 @@ builder.Services.AddSingleton<IRequestValidator, ValidatableTypeRequestValidator
   * The attributes on the parameters of the primary constructor of a record are used. `DataAnnotationsRequestValidator`
     uses only the attributes on the properties (`[property: Required]`).
   * Properties with `[JsonIgnore]` are not validated.
-  * For an attribute on the type that does not return its own `ValidationResult`, the default message uses the display
-    name of the last validated property, and the result has its member name.
+  * With .NET 10, for an attribute on the type that does not return its own `ValidationResult`, the default message
+    uses the display name of the last validated property, and the result has its member name. With .NET 11, the
+    result is the same as `DataAnnotationsRequestValidator`.
 * Difference from AmazonLambdaExtension: the package there references `Microsoft.Extensions.Validation`, and the
   validator is registered in `ConfigureServices()` of the `ServiceResolver`.
 
