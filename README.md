@@ -31,7 +31,7 @@ The following are **not** supported yet:
 Requirements:
 
 * The project uses the `Azure.Functions.Sdk` MSBuild SDK (1.0.1 or later), with the version pinned in `global.json`.
-* The project targets .NET 10 (`net10.0`).
+* The project targets .NET 11 or .NET 10 (`net11.0` or `net10.0`).
 * HTTP functions use the ASP.NET Core integration (`Microsoft.Azure.Functions.Worker.Extensions.Http.AspNetCore`).
 * `AddAzureFunctionExtension()` is required, and it must be called after `ConfigureFunctionsWebApplication()`.
 

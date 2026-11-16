@@ -68,7 +68,7 @@ public sealed class FunctionCatalogTests
         foreach (var metadata in CreateMetadata())
         {
             var entryPoint = metadata.EntryPoint!;
-            var separator = entryPoint.LastIndexOf('.');
+            var separator = entryPoint.LastIndexOf('.', StringComparison.Ordinal);
             var type = assembly.GetType(entryPoint[..separator]);
             Assert.NotNull(type);
 

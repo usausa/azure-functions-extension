@@ -28,7 +28,9 @@ public sealed class ValidatableTypeRequestValidator : IRequestValidator
 
         var context = new ValidateContext
         {
+#if !NET11_0_OR_GREATER
             ValidationContext = new ValidationContext(value, type.Name, null, null),
+#endif
             ValidationOptions = options
         };
         info.ValidateAsync(value, context, CancellationToken.None).GetAwaiter().GetResult();
@@ -42,8 +44,13 @@ public sealed class ValidatableTypeRequestValidator : IRequestValidator
         {
             foreach (var (key, messages) in errors)
             {
-                foreach (var message in messages)
+                foreach (var error in messages)
                 {
+#if NET11_0_OR_GREATER
+                    var message = error.ErrorMessage;
+#else
+                    var message = error;
+#endif
                     results.Add(key.Length > 0 ? new ValidationResult(message, [key]) : new ValidationResult(message));
                 }
             }
