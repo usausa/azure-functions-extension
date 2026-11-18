@@ -4,7 +4,6 @@
     <TargetFramework>net11.0</TargetFramework>
     <OutputType>Exe</OutputType>
     <IsPackable>false</IsPackable>
-    <CodeAnalysisRuleSet>..\Analyzers.ruleset</CodeAnalysisRuleSet>
     <NoWarn>$(NoWarn);ASP0029</NoWarn>
   </PropertyGroup>
 
